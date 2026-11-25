@@ -364,9 +364,18 @@ void health_screen::_draw(game& owner)
         ui::append(text, length, ")");
     }
 
-    // As mockup 04: the tab bar shows L1/R1; the footer's right side holds the save and quit hint.
-    hud::hint hints[] = { { "A", text }, { "B", "BACK" } };
-    screen.hints(footer_y, hints, 2, false);
+    // Playtest 6: B closes the tabs (it said BACK here), and the footer holds only actions: with nothing to treat
+    // there is no A; with a treatment but nothing to do it with, it is greyed out.
+    if(body.wound(selected).type == wound_type::NONE)
+    {
+        constexpr hud::hint hints[] = { { "B", "CLOSE" }, { "D-PAD", "CHOOSE" } };
+        screen.hints(footer_y, hints, 2, false);
+    }
+    else
+    {
+        hud::hint hints[] = { { "A", text, treatment != item_id::NONE }, { "B", "CLOSE" }, { "D-PAD", "CHOOSE" } };
+        screen.hints(footer_y, hints, 3, false);
+    }
 }
 
 }

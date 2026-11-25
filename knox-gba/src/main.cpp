@@ -45,6 +45,7 @@ int main()
     {
         bool load = false;
         bool make_character = false;
+        [[maybe_unused]] bool replaces_save = false;
         kx::character_choice made;
 
         #if KX_BENCH == 7 || KX_BENCH == 10 || KX_BENCH == 12 || KX_BENCH == 14 || KX_BENCH == 16
@@ -90,6 +91,7 @@ int main()
                 kx::title_choice choice = kx::title_screen();
                 load = choice.load;
                 make_character = ! choice.load || choice.new_survivor;
+                replaces_save = choice.replaces;
                 world_seed = choice.seed;
 
                 // A new world's sandbox settings (a saved world's are restored when its save loads).
@@ -105,7 +107,7 @@ int main()
             // A new world or a new survivor: occupation and traits first. B goes back to the title.
             if(make_character)
             {
-                bool made_one = kx::character_creation(made);
+                bool made_one = kx::character_creation(made, replaces_save);
                 bn::core::update();
 
                 if(! made_one)

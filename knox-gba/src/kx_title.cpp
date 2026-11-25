@@ -11,6 +11,7 @@
 #include "kx_bench.h"
 #include "kx_canvas.h"
 #include "kx_hash.h"
+#include "kx_hud.h"
 #include "kx_sandbox.h"
 #include "kx_save.h"
 #include "kx_settings.h"
@@ -174,7 +175,7 @@ namespace
 
     void seed_text(char* output, uint32_t seed, bool rolled)
     {
-        const char* prefix = "SEED  ";
+        const char* prefix = "SEED ";
         int length = 0;
 
         while(*prefix)
@@ -225,7 +226,20 @@ namespace
         seed_text(text, seed, rolled);
         pixels.rect(world_panel_left + 2, world_seed_y - 2, world_panel_width - 4, 9,
                     selected == 0 ? colour::border : colour::fill);
-        pixels.text_centered(center_x, world_seed_y, text, selected == 0 ? colour::accent : colour::text);
+
+        // Picked, it has arrows like a setting's value (playtest 6): left and right roll a new seed.
+        if(selected == 0)
+        {
+            char picked[32];
+            int length = ui::append(picked, 0, "< ");
+            length = ui::append(picked, length, text);
+            ui::append(picked, length, " >");
+            pixels.text_centered(center_x, world_seed_y, picked, colour::accent);
+        }
+        else
+        {
+            pixels.text_centered(center_x, world_seed_y, text, colour::text);
+        }
 
         // The settings, the picked one with arrows round its value.
         for(int index = 0; index < sandbox::setting_count; ++index)
@@ -296,7 +310,7 @@ namespace
                 }
             }
 
-            constexpr footer_hint hints[] = { { "UP/DOWN", "PICK" }, { "<>", "CHANGE" }, { "B", "BACK" } };
+            constexpr footer_hint hints[] = { { "B", "BACK" }, { "UP/DOWN", "CHOOSE" }, { "<>", "CHANGE" } };
             footer(pixels, footer_y, hints, 3);
         };
 
@@ -358,7 +372,7 @@ namespace
             pixels.text_centered(center_x, 9, game_name, colour::accent);
             menu_screen::draw_guide(pixels, 22, topic, page);
 
-            constexpr footer_hint hints[] = { { "UP/DOWN", "TOPIC" }, { "<>", "PAGE" }, { "B", "BACK" } };
+            constexpr footer_hint hints[] = { { "B", "BACK" }, { "UP/DOWN", "TOPIC" }, { "<>", "PAGE" } };
             footer(pixels, footer_y, hints, 3);
         };
 
@@ -417,7 +431,7 @@ namespace
             pixels.text_centered(center_x, 9, game_name, colour::accent);
             menu_screen::draw_world(pixels, 22, saved.seed, saved.sandbox, selected);
 
-            constexpr footer_hint hints[] = { { "UP/DOWN", "CHOOSE" }, { "B", "BACK" } };
+            constexpr footer_hint hints[] = { { "B", "BACK" }, { "D-PAD", "CHOOSE" } };
             footer(pixels, footer_y, hints, 2);
         };
 
@@ -463,7 +477,7 @@ namespace
             pixels.clear();
             pixels.text_centered(center_x, 10, game_name, colour::accent);
             pixels.panel(left, top, width, height, colour::fill, colour::border);
-            pixels.text_centered(center_x, top + 6, "MENU", colour::accent);
+            pixels.text(left + 6, top + 5, "MENU", colour::quiet);     // as the Start menu's MENU tab (playtest 6)
             pixels.rect(left + 4, top + 14, width - 8, 1, colour::border);
             menu_screen::draw_entries(pixels, left, top + 22, width, selected, count);
 
@@ -475,7 +489,7 @@ namespace
                 y += 8;
             }
 
-            constexpr footer_hint hints[] = { { "A", "OPEN" }, { "D-PAD", "CHOOSE" }, { "B", "BACK" } };
+            constexpr footer_hint hints[] = { { "A", "OPEN" }, { "B", "BACK" }, { "D-PAD", "CHOOSE" } };
             footer(pixels, footer_y, hints, 3);
         };
 
@@ -561,23 +575,19 @@ namespace
         pixels.rect(world_panel_left + 4, world_panel_top + 25, world_panel_width - 8, 1, colour::border);
         pixels.text_centered(center_x, world_panel_top + 29, "SANDBOX", colour::quiet);
 
-        // Under the panel: Select for the MENU (playtest 2, the settings; playtest 3, with the guide), and with a
-        // save the warning that the new world replaces it after it, the line centred; then the footer hints, centred
-        // too (playtest 4: with a save the two sat at the line's ends, and the hints at the left margin).
-        constexpr int line_y = world_panel_top + world_panel_height + 3;
-        constexpr const char* warning = "REPLACES THE SAVED WORLD";
-        constexpr footer_hint select_hint[] = { { "SELECT", "MENU" } };
-        int warning_width = replaces ? hint_gap + canvas::text_width(warning) : 0;
-        int x = footer(pixels, line_y, select_hint, 1, warning_width);
+        // Under the panel (playtest 6: the hints wrapped onto two lines): with a save, the warning that the new
+        // world replaces it on its own line, then one row of hints, straight on the darkened map like the title's.
+        constexpr int strip_top = world_panel_top + world_panel_height + 2;
 
         if(replaces)
         {
-            pixels.text(x, line_y, warning, colour::ui_red);
+            pixels.text_centered(center_x, strip_top + 4, "STARTING REPLACES THE SAVED WORLD", colour::ui_red);
         }
 
-        constexpr footer_hint hints[] = { { "A", "START" }, { "UP/DOWN", "PICK" }, { "<>", "CHANGE" },
-                                          { "B", "BACK" } };
-        footer(pixels, footer_y, hints, replaces ? 4 : 3);
+        constexpr footer_hint replace_hints[] = { { "A", "START" }, { "B", "BACK" }, { "<>", "CHANGE" },
+                                                  { "SELECT", "MENU" } };
+        constexpr footer_hint first_hints[] = { { "A", "START" }, { "<>", "CHANGE" }, { "SELECT", "MENU" } };
+        footer(pixels, footer_y, replaces ? replace_hints : first_hints, replaces ? 4 : 3);
         };
 
         draw_fixed();
@@ -671,33 +681,14 @@ namespace
     // "DAY 3 ` 14:20" (the dot glyph), or "NEW SURVIVOR ` DAY 3" after a death.
     void saved_text(char* output, const save::summary& saved)
     {
-        int day = (saved.world_minute / (24 * 60)) + 1;
-        int minute_of_day = saved.world_minute % (24 * 60);
-        int length = 0;
-
-        if(! saved.has_survivor)
-        {
-            length = ui::append(output, length, "NEW SURVIVOR ` ");
-        }
-
-        timeline::date_text(output + length, day);
-
-        while(output[length])
-        {
-            ++length;
-        }
-
         if(saved.has_survivor)
         {
-            length = ui::append(output, length, " ` ");
-            output[length++] = char('0' + (minute_of_day / 600));
-            output[length++] = char('0' + ((minute_of_day / 60) % 10));
-            output[length++] = ':';
-            output[length++] = char('0' + ((minute_of_day % 60) / 10));
-            output[length++] = char('0' + (minute_of_day % 10));
+            hud::clock_text(output, saved.world_minute);
+            return;
         }
 
-        output[length] = 0;
+        int length = ui::append(output, 0, "NEW SURVIVOR ` ");
+        timeline::date_text(output + length, (saved.world_minute / (24 * 60)) + 1);
     }
 
     void draw_menu(canvas& pixels, const save::summary& saved, int selected)
@@ -800,6 +791,7 @@ title_choice title_screen()
             // creation keeps it).
             if(new_world(pixels, scene, true, frames, result.seed, result.sandbox))
             {
+                result.replaces = true;
                 return result;
             }
 

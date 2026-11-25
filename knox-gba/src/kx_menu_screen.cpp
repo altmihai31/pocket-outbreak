@@ -313,10 +313,10 @@ void menu_screen::draw_world(canvas& pixels, int top, uint32_t seed, const sandb
 
         if(current)
         {
-            pixels.text(detail_x, y, ">", colour::accent);
+            pixels.tick_box(detail_x, y, true, colour::accent);
         }
 
-        pixels.text(detail_x + 4, y, sandbox::value_name(which, index), current ? colour::accent : colour::quiet);
+        pixels.text(detail_x + 9, y, sandbox::value_name(which, index), current ? colour::accent : colour::quiet);
         y += 8;
     }
 
@@ -486,7 +486,7 @@ void menu_screen::_draw(game& owner)
     {
         draw_guide(pixels, panels_top, _topic, _guide_page);
         pixels.rect(0, footer_top, canvas::width, canvas::height - footer_top, canvas::backdrop);
-        constexpr hud::hint hints[] = { { "UP/DOWN", "TOPIC" }, { "<>", "PAGE" }, { "B", "BACK" } };
+        constexpr hud::hint hints[] = { { "B", "BACK" }, { "UP/DOWN", "TOPIC" }, { "<>", "PAGE" } };
         screen.hints(footer_y, hints, 3, false);
         return;
     }
@@ -495,7 +495,7 @@ void menu_screen::_draw(game& owner)
     {
         draw_world(pixels, panels_top, world::seed(), sandbox::current(), _world_row);
         pixels.rect(0, footer_top, canvas::width, canvas::height - footer_top, canvas::backdrop);
-        constexpr hud::hint hints[] = { { "UP/DOWN", "CHOOSE" }, { "B", "BACK" } };
+        constexpr hud::hint hints[] = { { "B", "BACK" }, { "D-PAD", "CHOOSE" } };
         screen.hints(footer_y, hints, 2, false);
         return;
     }
@@ -540,9 +540,9 @@ void menu_screen::_draw(game& owner)
         }
 
         pixels.rect(0, footer_top, canvas::width, canvas::height - footer_top, canvas::backdrop);
-        constexpr hud::hint open_hints[] = { { "A", "OPEN" }, { "B", "CLOSE" } };
-        constexpr hud::hint quit_hints[] = { { "HOLD A", "SAVE AND QUIT" }, { "B", "CLOSE" } };
-        screen.hints(footer_y, _entry == quit_entry ? quit_hints : open_hints, 2, false);
+        constexpr hud::hint open_hints[] = { { "A", "OPEN" }, { "B", "CLOSE" }, { "D-PAD", "CHOOSE" } };
+        constexpr hud::hint quit_hints[] = { { "HOLD A", "SAVE AND QUIT" }, { "B", "CLOSE" }, { "D-PAD", "CHOOSE" } };
+        screen.hints(footer_y, _entry == quit_entry ? quit_hints : open_hints, 3, false);
         return;
     }
 
@@ -561,12 +561,13 @@ void menu_screen::_draw(game& owner)
     {
         bool current = value == settings::value(which);
 
+        // The current value ticked, as traits are (playtest 6: it was ">FULL", a third way to mark a choice).
         if(current)
         {
-            pixels.text(detail_x, y, ">", colour::accent);
+            pixels.tick_box(detail_x, y, true, colour::accent);
         }
 
-        pixels.text(detail_x + 4, y, settings::value_text(which, value), current ? colour::accent : colour::quiet);
+        pixels.text(detail_x + 9, y, settings::value_text(which, value), current ? colour::accent : colour::quiet);
         y += 8;
     }
 
@@ -582,8 +583,8 @@ void menu_screen::_draw(game& owner)
     }
 
     pixels.rect(0, footer_top, canvas::width, canvas::height - footer_top, canvas::backdrop);
-    constexpr hud::hint hints[] = { { "D-PAD", "CHANGE" }, { "B", "BACK" } };
-    screen.hints(footer_y, hints, 2, false);
+    constexpr hud::hint hints[] = { { "B", "BACK" }, { "UP/DOWN", "CHOOSE" }, { "<>", "CHANGE" } };
+    screen.hints(footer_y, hints, 3, false);
 }
 
 }

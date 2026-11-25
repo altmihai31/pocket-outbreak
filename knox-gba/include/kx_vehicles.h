@@ -206,6 +206,12 @@ public:
 
     [[nodiscard]] bool part_ok(int index, car_part part) const;
 
+    // Any of this part is there to take (a tyre, some fuel): what a wreck gives (playtest 6).
+    [[nodiscard]] bool part_some(int index, car_part part) const
+    {
+        return part == car_part::TYRES ? _active[index].data.tyres > 0 : part_ok(index, part);
+    }
+
     // Nothing more of this part can go in (fitted, full, all four tyres).
     [[nodiscard]] bool part_full(int index, car_part part) const;
 

@@ -38,8 +38,8 @@ const skill_info skill_infos[skill_count] = {
       { "DIGGING PLOTS,", "PLANTING, WATERING", "AND HARVESTING." } },
     { "CARPENTRY", true, { "STURDIER", "BARRICADES AT", "LEVEL 3.", nullptr },
       { "BUILDING IN", "BUILD MODE.", nullptr } },
-    { "MECHANICS", false, { "HOTWIRING AT", "LEVEL 2.", nullptr, nullptr },
-      { "NOT YET.", nullptr, nullptr } },
+    { "MECHANICS", true, { "HOTWIRING AT", "LEVEL 2.", nullptr, nullptr },
+      { "FITTING CAR", "PARTS, REPAIRS,", "HOTWIRING." } },
 };
 
 const trait_info trait_infos[trait_count] = {
