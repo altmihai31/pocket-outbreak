@@ -24,7 +24,7 @@ def main():
     last = 0
     shots = []
 
-    for _ in range(12000):
+    for _ in range(20000):
         emu.run(1)
         address = emu.lib.retro_get_memory_data(0)
 

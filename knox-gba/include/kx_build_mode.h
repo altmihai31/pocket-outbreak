@@ -36,6 +36,17 @@ public:
     void close(game& owner);
     void update(game& owner, const input_frame& input);
 
+    #if KX_BENCH
+        // Benches: points build mode at a piece and a tile, as the player choosing them would.
+        void bench_aim(piece_kind kind, int tile_x, int tile_y)
+        {
+            _piece = int(kind);
+            _cursor_x = tile_x;
+            _cursor_y = tile_y;
+            _hold = 0;
+        }
+    #endif
+
     // What the HUD shows (mockup 06's bar and boxes).
     [[nodiscard]] const hud::build_view& view() const
     {

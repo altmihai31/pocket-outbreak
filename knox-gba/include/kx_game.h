@@ -418,6 +418,7 @@ private:
 
     #if KX_BENCH == 18
         void _bench_door_gallery(int frame);
+        bool _bench_build_gallery(int index, bool setup, int door_x, int door_y, int& shot);
     #endif
 
     #if KX_BENCH == 12
