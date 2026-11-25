@@ -33,14 +33,6 @@ A single-player, top-down zombie survival sandbox inspired by Project Zomboid, b
 - Controls use only the GBA's 10 buttons (spec: Controls and UI).
 - Nothing from the spec's cut list without asking.
 
-## Current milestone: 1, movement and camera
+## Current state
 
-Done when, on the Miyoo:
-
-1. The player moves in 8 directions with the acceleration, stop and diagonal values from the spec's movement table, plus corner sliding.
-2. Walk, jog, sprint and crouch work, with terrain speed modifiers on a hand-made test map (road, grass, forest, shallow water).
-3. The camera has lookahead and a deadzone as specified.
-4. A debug menu edits the movement tuning table live.
-5. The profiler shows the frame comfortably under budget.
-
-Then milestone 2 (combat slice), following the spec's Build order.
+Milestones 1 to 14 are built and awaiting device testing; `README.md` lists what each one added. Work now comes from playtest feedback: each round has a plan in `docs/playtest-N-plan.md`, and the latest round is the current work. Large new features get their own plan in `docs/` before any code.
