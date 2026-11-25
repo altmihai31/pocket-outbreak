@@ -49,6 +49,14 @@ Everything runs on real GBA hardware at a locked 60 fps. It's built with the [Bu
     <td align="center"><sub><b>A month in,</b> the grid is dead and a flashlight is all you have.</sub></td>
   </tr>
   <tr>
+    <td><img src="screenshots/build.png" alt="Build mode: barricading a window, with the piece bar, materials and button hints"></td>
+    <td><img src="screenshots/barricade.png" alt="A worn-through barricade on a window and the BARRICADE FAILING alert"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Fortify a safehouse</b> with barricades, doors, log walls and traps.</sub></td>
+    <td align="center"><sub><b>Watch the boards.</b> Barricades splinter as zombies pound them, and warn you before they give.</sub></td>
+  </tr>
+  <tr>
     <td><img src="screenshots/new-world.png" alt="New world: seed and sandbox settings over the drifting map"></td>
     <td><img src="screenshots/guide.png" alt="The in-game guide"></td>
   </tr>
@@ -63,17 +71,17 @@ Everything runs on real GBA hardware at a locked 60 fps. It's built with the [Bu
 - **Survival:** hunger, thirst, sleep, body temperature, wounds, infection, stitching and bandages, and moodles that tell you what's wrong.
 - **Zombies:** hordes counted per area that migrate by the hour and hunt by sight and sound. They break windows and barricades, and some crawl. One zombie that grabs you bites; two or more at once are deadly.
 - **Combat:** melee with charge-up swings, shoves and stomps. Four guns with aiming, jams and active reload. Spears, bottles and Molotovs.
-- **Base building:** barricades, crates, campfires, rain collectors, wooden doors, log walls and safehouses.
+- **Base building:** barricades, crates, campfires, rain collectors, wooden doors, log walls and safehouses. Barricades hold for minutes against a lone zombie, show their wear as they're hit, and warn you when they're about to give.
 - **The wild:** foraging, farming, fishing, hunting deer, rabbits and birds, snares and traps, chopping trees, swimming, and wells.
 - **Vehicles:** bicycles and cars with parts, keys, hotwiring, fuel, siphoning and alarms. Wrecks you can strip for parts.
 - **A living world:** seasons, weather, the radio, the helicopter, power and water shutoffs, random events, and locked doors, safes and stashes.
 - **Characters:** occupations, traits, 14 skills plus Fitness and Strength, and skill books.
-- **Music and sound:** five original music loops with a director that follows the action, plus a full set of synthesized sound effects.
+- **Music and sound:** five original music loops with a director that follows the action, plus a full set of synthesized sound effects, all tuned to carry on small handheld speakers.
 - **Saves:** an SRAM save with autosave and a record of past survivors. The world is packed and kept in two copies, so a power cut mid-save never loses your survivor or your world. Death is permanent.
 
 ## How to play
 
-1. Download `pocket-outbreak.gba` from the [latest release](https://github.com/altmihai31/pocket-outbreak/releases/latest) (v0.2 adds the playtest 5 and 6 fixes: safer saves, grabs, and a UI polish pass).
+1. Download `pocket-outbreak.gba` from the [latest release](https://github.com/altmihai31/pocket-outbreak/releases/latest) (v0.2 adds the playtest 5 and 6 fixes: safer saves, grabs, and a UI polish pass). The latest build from `main`, with clearer door looks, tougher barricades and a new build panel, is on the [Actions](https://github.com/altmihai31/pocket-outbreak/actions/workflows/build.yml) page.
 2. Open it in any GBA emulator (mGBA is recommended), or copy it to your handheld.
    - **Miyoo Mini / Mini Plus (OnionOS):** put the ROM in `Roms/GBA/`. For box art, put `Pocket Outbreak.png` from the release in `Roms/GBA/Imgs/`, renamed to match the ROM's filename. It runs on both the gpSP and mGBA cores.
    - **Real hardware:** use any GBA flash cart with SRAM saves.
@@ -87,7 +95,7 @@ Everything runs on real GBA hardware at a locked 60 fps. It's built with the [Bu
 | B | Tap to shove. Hold while moving to sprint. | Back |
 | L | Crouch | Previous tab |
 | R (hold) | Aim a gun (A fires, B reloads) or a throwable | Next tab |
-| Select | Use the chosen hotbar item. L + Select picks the next slot. | |
+| Select | Use the chosen hotbar item (a yellow frame marks it). L + Select picks the next slot. With the hammer it opens build mode. | |
 | Start | Open the menu tabs: Gear, Health, Craft, Skills, Map, Menu | Close |
 
 To save and quit, open the **Menu** tab and hold A. The game also autosaves. The in-game **Guide** (Menu tab) explains everything else.
