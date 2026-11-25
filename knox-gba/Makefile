@@ -40,7 +40,9 @@ DMGAUDIO    	:=  dmg_audio
 DMGAUDIOBACKEND	:=  default
 ROMTITLE    	:=  POCKETOUTBRK
 ROMCODE     	:=  KNXE
-USERFLAGS   	:=  -DBN_CFG_SPRITES_MAX_SORT_LAYERS=32 -DBN_CFG_AUDIO_MAX_SOUND_CHANNELS=6
+# Sprite tile items 256 (Butano's default is 128; playtest 5: a busy screen ran out, and a sprite text redraw needs
+# the old and new tiles at once for a frame).
+USERFLAGS   	:=  -DBN_CFG_SPRITES_MAX_SORT_LAYERS=32 -DBN_CFG_SPRITE_TILES_MAX_ITEMS=256 -DBN_CFG_AUDIO_MAX_SOUND_CHANNELS=6
 USERCXXFLAGS	:=
 USERASFLAGS 	:=
 USERLDFLAGS 	:=

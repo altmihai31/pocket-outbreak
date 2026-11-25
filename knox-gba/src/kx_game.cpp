@@ -180,6 +180,13 @@ game::game(bool load_save, const character_choice* choice) :
     _throws(_camera),
     _animals(_camera)
 {
+    // Playtest 5: Save and Quit from the MENU tab left the sprites faded as they are behind a menu, and the next
+    // game (Continue) started with them dark. Every game starts with the palettes at full colour.
+    bn::sprite_palettes::set_fade_intensity(0);
+    bn::sprite_palettes::set_grayscale_intensity(0);
+    bn::bg_palettes::set_fade_intensity(0);
+    bn::bg_palettes::set_grayscale_intensity(0);
+
     _containers.init();
     flow::reset();
     music::enter_world();
@@ -459,6 +466,16 @@ game_exit game::run()
         {
             input_frame frame_input = _input.read();
 
+            // Lists scroll while a direction is held (playtest 5); the map screen repeats its own cursor.
+            if((_menu_open() && ! _map.active()) || _search.active() || _car.active())
+            {
+                _menu_repeat.apply(frame_input);
+            }
+            else
+            {
+                _menu_repeat.reset();
+            }
+
             #if KX_BENCH
                 if(_input.finished() && ! bench_reported)
                 {
@@ -647,7 +664,9 @@ game_exit game::run()
             else if(! _search.active() && ! _build.active() && ! _car.active() && ! _safe.active() &&
                     frame_input.start_pressed)
             {
-                if(frame_input.select_held)
+                // Select + Start: the tuning menu, in tester and bench builds only (playtest 5: players found it by
+                // accident on the Miyoo Mini and could break the game in it).
+                if((KX_DEBUG || KX_BENCH) && frame_input.select_held)
                 {
                     _menu.open(*this);
                 }

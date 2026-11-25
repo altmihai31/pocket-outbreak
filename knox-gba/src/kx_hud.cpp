@@ -1269,12 +1269,32 @@ void hud::death_screen(const char* cause, int kills, int minutes_survived, int d
     _canvas.text_centered(center, 34, "THIS IS HOW YOU DIED", colour::quiet);
     _canvas.text_centered(center, 50, cause, colour::ui_red);
 
+    // Playtest 5: a short life showed "0 DAYS 0 H" and "0.0 KM"; under a day it counts hours and minutes, under a
+    // kilometre metres.
     char text[32];
+    int days = minutes_survived / (24 * 60);
+    int hours = (minutes_survived / 60) % 24;
     int length = ui::append(text, 0, "SURVIVED ");
-    length = ui::append_int(text, length, minutes_survived / (24 * 60));
-    length = ui::append(text, length, " DAYS ");
-    length = ui::append_int(text, length, (minutes_survived / 60) % 24);
-    ui::append(text, length, " H");
+
+    if(days > 0)
+    {
+        length = ui::append_int(text, length, days);
+        length = ui::append(text, length, days == 1 ? " DAY " : " DAYS ");
+        length = ui::append_int(text, length, hours);
+        ui::append(text, length, " H");
+    }
+    else
+    {
+        if(hours > 0)
+        {
+            length = ui::append_int(text, length, hours);
+            length = ui::append(text, length, " H ");
+        }
+
+        length = ui::append_int(text, length, minutes_survived % 60);
+        ui::append(text, length, " MIN");
+    }
+
     _canvas.text_centered(center, 74, text, colour::text);
 
     length = ui::append(text, 0, "KILLS ");
@@ -1283,10 +1303,20 @@ void hud::death_screen(const char* cause, int kills, int minutes_survived, int d
 
     // Tiles are about a metre (spec: 4,096 tiles in ~12 minutes of jogging).
     length = ui::append(text, 0, "WALKED ");
-    length = ui::append_int(text, length, distance_tiles / 1000);
-    text[length++] = '.';
-    text[length++] = char('0' + ((distance_tiles / 100) % 10));
-    ui::append(text, length, " KM");
+
+    if(distance_tiles < 1000)
+    {
+        length = ui::append_int(text, length, distance_tiles);
+        ui::append(text, length, " M");
+    }
+    else
+    {
+        length = ui::append_int(text, length, distance_tiles / 1000);
+        text[length++] = '.';
+        text[length++] = char('0' + ((distance_tiles / 100) % 10));
+        ui::append(text, length, " KM");
+    }
+
     _canvas.text_centered(center, 98, text, colour::text);
     _canvas.text_centered(center, 126, "A: NEW SURVIVOR", colour::accent);
 }

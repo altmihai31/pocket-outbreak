@@ -537,8 +537,9 @@ void gear_screen::_draw(game& owner)
     else
     {
         // As mockup 04: the tab bar shows L1/R1; the footer's right side holds the save and quit hint.
+        // Playtest 5: an empty slot has no actions, so its footer offers none.
         constexpr hud::hint gear_hints[] = { { "A", "ACTIONS" }, { "B", "CLOSE" } };
-        screen.hints(footer_y, gear_hints, 2, false);
+        screen.hints(footer_y, selected.empty() ? gear_hints + 1 : gear_hints, selected.empty() ? 1 : 2, false);
     }
 }
 

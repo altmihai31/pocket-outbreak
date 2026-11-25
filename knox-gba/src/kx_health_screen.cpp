@@ -159,7 +159,7 @@ void health_screen::update(game& owner, const input_frame& input)
     if(input.up_pressed || input.down_pressed)
     {
         int count = int(sizeof(part_order) / sizeof(part_order[0]));
-        _part = (_part + (input.down_pressed ? 1 : count - 1)) % count;
+        _part = step_list(_part, count, input);
         _blink = 0;
         _dirty = true;
     }

@@ -1186,6 +1186,25 @@ void player::_update_grab(const input_frame& input, game& owner)
             owner.toast("BITTEN (GOD MODE)", hud_tiles::bank_danger);
             _break_free(owner);
         }
+        else if(_grabbers < 2)
+        {
+            // Playtest 5: one zombie holding on until the time runs out bites (an arm or the torso, through any
+            // clothing) and lets go; the bite infects as any bite does. Only two or more at once kill on the spot.
+            int part = owner.random().get_int(3);
+            _body.add_wound(grab_parts[part], wound_type::BITE, true, owner.random());
+
+            char text[32];
+            char* output = text;
+            append(output, wound_name(wound_type::BITE));
+            append(output, ": ");
+            append(output, body_part_name(grab_parts[part]));
+            owner.toast(text, hud_tiles::bank_danger, 120);
+
+            sfx::play(sfx::id::BITE);
+            owner.shake(2, 12);
+            _flash_white();
+            _break_free(owner);
+        }
         else
         {
             sfx::play(sfx::id::BITE);

@@ -217,7 +217,7 @@ void car_screen::update(game& owner, const input_frame& input)
 
     if(input.up_pressed || input.down_pressed)
     {
-        _row = (_row + (input.down_pressed ? 1 : row_count - 1)) % row_count;
+        _row = step_list(_row, row_count, input);
         sfx::play(sfx::id::MOODLE, milli(300));
         _dirty = true;
     }

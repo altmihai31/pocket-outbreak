@@ -568,4 +568,27 @@ input_frame input_source::read()
 
 #endif
 
+void menu_repeat::apply(input_frame& input)
+{
+    bool held[4] = { input.dy < 0, input.dy > 0, input.dx < 0, input.dx > 0 };
+    bool* pressed[4] = { &input.up_pressed, &input.down_pressed, &input.left_pressed, &input.right_pressed };
+
+    for(int index = 0; index < 4; ++index)
+    {
+        if(! held[index])
+        {
+            _held[index] = 0;
+            continue;
+        }
+
+        int frames = ++_held[index] - menu_repeat_tuning::delay_frames;
+
+        if(frames > 0 && frames % menu_repeat_tuning::interval_frames == 0)
+        {
+            *pressed[index] = true;
+            input.repeated = true;
+        }
+    }
+}
+
 }

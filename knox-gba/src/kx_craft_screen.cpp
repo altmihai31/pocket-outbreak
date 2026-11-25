@@ -80,7 +80,7 @@ void craft_screen::update(game& owner, const input_frame& input)
 
     if(input.up_pressed || input.down_pressed)
     {
-        _selected = (_selected + (input.down_pressed ? 1 : recipe_count - 1)) % recipe_count;
+        _selected = step_list(_selected, recipe_count, input);
         sfx::play(sfx::id::MOODLE, milli(300));
         _dirty = true;
     }

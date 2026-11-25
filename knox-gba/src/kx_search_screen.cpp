@@ -247,6 +247,7 @@ void search_screen::update(game& owner, const input_frame& input)
         if(_revealed != _revealed_shown)
         {
             _draw_reveals(owner);
+            _draw_footer(owner);
         }
 
         if(_frames / 60 != _shown_seconds)
@@ -630,20 +631,56 @@ void search_screen::_draw_right(game& owner)
 
     _draw_info(owner);
 
+    _draw_footer(owner);
+}
+
+void search_screen::_draw_footer(game& owner)
+{
+    // Playtest 5: only the actions the chosen slot and the container allow (an empty slot offered A TAKE, and an
+    // emptied trunk R TAKE ALL).
+    hud& screen = owner.hud_ref();
+    canvas& pixels = screen.pixels();
     pixels.rect(0, footer_top, canvas::width, canvas::height - footer_top, canvas::backdrop);
 
-    constexpr hud::hint take_hints[] = { { "A", "TAKE" }, { ui::button::r, "TAKE ALL" }, { "SELECT", "SPLIT" },
-                                                 { "B", "CLOSE" } };
-    constexpr hud::hint store_hints[] = { { "A", "STORE" }, { "B", "CLOSE" } };
+    hud::hint shown[4];
+    int count = 0;
 
     if(_panel == 0)
     {
-        screen.hints(footer_y, take_hints, 4, false);
+        const container& value = owner.containers().get(_container);
+        int revealed = bn::min(_revealed, int(container::capacity));
+        bool any = false;
+
+        for(int slot = 0; slot < revealed; ++slot)
+        {
+            any |= ! value.items[slot].empty() && value.items[slot].id != item_id::TAP_WATER;
+        }
+
+        const item_stack& chosen = value.items[_cursor[0]];
+        bool takeable = _cursor[0] < revealed && ! chosen.empty();
+
+        if(takeable)
+        {
+            shown[count++] = { "A", chosen.id == item_id::TAP_WATER ? "DRINK" : "TAKE" };
+        }
+
+        if(any)
+        {
+            shown[count++] = { ui::button::r, "TAKE ALL" };
+        }
+
+        if(takeable && chosen.quantity() > 1)
+        {
+            shown[count++] = { "SELECT", "SPLIT" };
+        }
     }
-    else
+    else if(! owner.hero().items().slot(_cursor[1]).empty())
     {
-        screen.hints(footer_y, store_hints, 2, false);
+        shown[count++] = { "A", "STORE" };
     }
+
+    shown[count++] = { "B", "CLOSE" };
+    screen.hints(footer_y, shown, count, false);
 }
 
 }
