@@ -151,6 +151,13 @@ ifeq ($(BENCH),7)
 	USERFLAGS	+=  -DKX_BENCH=7
 endif
 
+# BENCH=17: the save alone, cut off part-way at many points and loaded again (KXCUT lines).
+ifeq ($(BENCH),17)
+	TARGET		:=  knox_cut
+	BUILD		:=  build_cut
+	USERFLAGS	+=  -DKX_BENCH=17
+endif
+
 ifeq ($(BENCH),4)
 	TARGET		:=  knox_restart
 	BUILD		:=  build_restart

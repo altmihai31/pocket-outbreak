@@ -13,7 +13,7 @@ hotbar), B in a wreck's trunk (back to the car screen), the blank info box on an
 | # | Note | Cause | Plan |
 |---|------|-------|------|
 | 1 | Select + Start opens a tuning menu that crashes on its DEBUG page ("No more sprite tiles items available"); random input found it twice | The menu opened in every build. Butano allows 128 sprite tile allocations by default; a sprite text redraw holds the old and the new tiles for a frame, and the DEBUG page's redraw over the world needs about 150 | The menu only in tester (`DEBUG=1`) and bench builds; `BN_CFG_SPRITE_TILES_MAX_ITEMS=256` (a few KB of EWRAM), which also gives a busy screen in play headroom |
-| 2 | A power cut during Save and Quit wipes both save headers | Not found in the code: the survivor's block already alternates between two slots with its header written last, and nothing writes 0xFF. The world block has one copy: a cut while it is written loses the world's changes (the survivor continues on the seed's fresh world) | No change this round; see Open |
+| 2 | A power cut during Save and Quit wipes both save headers | Nothing writes 0xFF, but a power-cut bench (BENCH=17: cuts every 61 bytes into a save, then loads) found two real losses. (a) A cut while the survivor's slot is written: the load chose the other, whole slot's header but kept the broken slot's block, read last (`read_newest` re-read only when both checked out): a broken survivor loaded. (b) A cut while the world is written: one copy, so the world's changes are lost (in 95% of cut points: the world is most of the bytes) | (a) The chosen slot is always read again. (b) **Two world copies when the block fits half the area (chosen: "fix if the test finds a problem")**, written in turn; the load takes the copy saved with the survivor's slot. Same save format, old saves load. `tools/power_cut_test.py` runs the bench in CI |
 | 3 | After Continue the survivor and cars stay dark until a menu opens | SAVE AND QUIT is in the MENU tab, so the game quits with the sprites dimmed behind the menu (70% fade); the next game starts with that fade still set | Every game starts with the bg and sprite palettes' fade and grayscale at 0 |
 | 4 | Losing a grab kills at full blood, the guide says a bite kills in 2 or 3 days, and "BLOCKED" can show just before | The grab timer running out was always death | **One grabber: a guaranteed bite (any clothing), then free; two or more: death (chosen)**. The guide says so |
 | 5 | The death screen shows "0 DAYS 0 H" and "0.0 KM" for a short life | Days and hours, kilometres to one decimal | Under a day: "2 H 26 MIN" / "26 MIN"; under a kilometre: metres; "1 DAY" singular |
@@ -26,15 +26,19 @@ hotbar), B in a wreck's trunk (back to the car screen), the blank info box on an
 - **1:** a bench build that opened the menu and walked the DEBUG page logged 66 tile items in the world, about 150 at
   the redraw's peak (over 128: the crash), and with 256 every row redraws (83 items between frames). The release
   build no longer opens it (`KX_DEBUG || KX_BENCH`).
+- **2:** the power-cut bench before the fix: 20 cuts per world size loaded a broken survivor, and 77 of 99 cuts lost
+  a 4.7 KB world. After: no cut loses or breaks the survivor at any size; worlds up to 14,000 bytes come back whole
+  from every cut; 20,000 and 28,656 bytes still lose the world on cuts during its write.
 - Bench 8's save round trip passes; bench 1 runs its route (no missed frames); bench 4's restarts run through.
 - Not checked in a real run: 3, 4, 5, 6 and 8 need button input mGBA from the command line can't give; they build
   and the benches pass.
 
 ## Open
 
-- **The save wipe (2):** reproduce the report's cut points with a bench that stops a save part-way and reboots. If
-  the world block is the only loss, a second world copy doesn't fit 32 KB SRAM (the world block is up to ~22 KB);
-  writing it in two halves with their own checksums would keep half the changes.
+- **The save, big worlds (2):** real worlds pass half the area early (bench 8: 8 KB new, 20 KB after looting 470
+  containers, most of it container records), so two copies only cover the first hour or so. Beyond that a cut
+  mid-write still loses the world's changes (never the survivor). Keeping both copies needs the world block under
+  14 KB: smaller container records and horde counts packed into fewer bytes.
 - **Doors (7):** a mockup of side doors that show from outside (a notch in the roof edge, or the door's frame drawn
   over the eave) before any change.
 - **P3, a later UI pass:** wreck details for parts-only wrecks, trait screen (opposite traits, unspent points, Down

@@ -1,8 +1,10 @@
 #include "kx_save.h"
 
+#include "kx_bench.h"
 #include "kx_settings.h"
 
 #include "bn_array.h"
+#include "bn_log.h"
 #include "bn_span.h"
 #include "bn_sram.h"
 
@@ -101,8 +103,26 @@ namespace
         bn::sram::read_span_offset(bytes, offset);
     }
 
+    #if KX_BENCH == 17
+        // Power-cut bench: the bytes SRAM still takes before the power goes (-1: no cut).
+        int power_budget = -1;
+    #endif
+
     void sram_write(const void* source, int size, int offset)
     {
+        #if KX_BENCH == 17
+            if(power_budget >= 0)
+            {
+                size = bn::min(size, power_budget);
+                power_budget -= size;
+
+                if(size <= 0)
+                {
+                    return;
+                }
+            }
+        #endif
+
         bn::sram::write_span_offset(bn::span<const uint8_t>(static_cast<const uint8_t*>(source), size), offset);
     }
 
@@ -125,6 +145,23 @@ namespace
 
     phase job_phase = phase::IDLE;
     int job_offset = 0;
+    int job_world_copy = 0;         // the world copy being written
+
+    // Playtest 5: the world area holds two copies when the world block fits half of it, written in turn, so a cut
+    // while one is written leaves the other (the one the survivor's slot was saved with). A bigger block takes the
+    // whole area from copy 0, as before.
+    constexpr int world_copy_offsets[2] = { world_offset, world_offset + ((sram_size - world_offset) / 2) };
+    constexpr int world_half_capacity = world_copy_offsets[1] - world_copy_offsets[0] - world_header_size;
+
+    [[nodiscard]] constexpr int world_copy_capacity(int copy)
+    {
+        return copy == 0 ? world_capacity : sram_size - world_copy_offsets[1] - world_header_size;
+    }
+
+    static_assert(world_copy_capacity(1) >= world_half_capacity);
+
+    // The copy holding the newest world (-1: not known, as after erasing).
+    int last_world_copy = -1;
     uint32_t job_crc = 0;
     slot_header job_header;
 
@@ -158,12 +195,10 @@ namespace
 
         int slot = ! second_ok || (first_ok && first.sequence > second.sequence) ? 0 : 1;
 
-        if(slot == 1 && first_ok)
-        {
-            // The buffer holds the last slot read: read the chosen one again.
-            BN_ASSERT(read_slot(1, second), "Save slot changed while reading");
-        }
-        else if(slot == 0 && second_ok)
+        // The buffer holds what the last read left in it, slot 1's, even when that slot failed its check (its
+        // block is read before the check): slot 0 is read again (playtest 5's power-cut bench: a cut while slot 1
+        // was written loaded slot 0's header with slot 1's broken block).
+        if(slot == 0)
         {
             BN_ASSERT(read_slot(0, first), "Save slot changed while reading");
         }
@@ -180,7 +215,8 @@ namespace
         case phase::WORLD_DATA:
         {
             int size = bn::min(bytes_per_frame, world_size - job_offset);
-            sram_write(world_buffer + job_offset, size, world_offset + world_header_size + job_offset);
+            sram_write(world_buffer + job_offset, size,
+                       world_copy_offsets[job_world_copy] + world_header_size + job_offset);
             job_crc = crc_update(job_crc, world_buffer + job_offset, size);
             job_offset += size;
 
@@ -194,7 +230,7 @@ namespace
         case phase::WORLD_HEADER:
         {
             world_header header{ world_magic, job_header.sequence, uint32_t(world_size), ~job_crc };
-            sram_write(&header, world_header_size, world_offset);
+            sram_write(&header, world_header_size, world_copy_offsets[job_world_copy]);
             job_phase = phase::CHARACTER;
             break;
         }
@@ -279,6 +315,12 @@ void commit(const writer& character, const writer& world, const summary& info, b
 
     job_phase = phase::WORLD_DATA;
     job_offset = 0;
+    job_world_copy = last_world_copy == 0 && world_size <= world_half_capacity ? 1 : 0;
+    last_world_copy = job_world_copy;
+
+    #if KX_BENCH
+        BN_LOG("KXSAVE world block ", world_size, " bytes, copy ", job_world_copy);
+    #endif
     job_crc = 0xFFFFFFFFu;
 
     if(at_once)
@@ -320,14 +362,49 @@ bool load(summary& info, bool& world_ok)
     character_size = int(header.character_size);
     last_sequence = header.sequence;
 
-    world_header world;
-    sram_read(&world, world_header_size, world_offset);
+    // The world copy saved with this survivor; if it doesn't check out, the newest older one that does.
+    int chosen = -1;
+    uint32_t chosen_sequence = 0;
 
-    if(world.magic == world_magic && world.size <= uint32_t(world_capacity))
+    for(int copy = 0; copy < 2; ++copy)
     {
-        sram_read(world_buffer, int(world.size), world_offset + world_header_size);
-        world_ok = crc32(world_buffer, int(world.size)) == world.crc;
-        world_size = world_ok ? int(world.size) : 0;
+        world_header world;
+        sram_read(&world, world_header_size, world_copy_offsets[copy]);
+
+        // Older than the survivor's slot or the same save first; a newer one (a cut while the survivor's slot was
+        // written after a world too big for two copies) only if nothing else checks out.
+        bool newer = world.sequence > header.sequence;
+        bool chosen_newer = chosen >= 0 && chosen_sequence > header.sequence;
+
+        if(world.magic != world_magic || world.size > uint32_t(world_copy_capacity(copy)) ||
+           (chosen >= 0 && (newer ? ! chosen_newer || world.sequence <= chosen_sequence :
+                                    ! chosen_newer && world.sequence <= chosen_sequence)))
+        {
+            continue;
+        }
+
+        sram_read(world_buffer, int(world.size), world_copy_offsets[copy] + world_header_size);
+
+        if(crc32(world_buffer, int(world.size)) == world.crc)
+        {
+            chosen = copy;
+            chosen_sequence = world.sequence;
+            world_size = int(world.size);
+        }
+    }
+
+    // The buffer holds the last copy read, which may be copy 1 after copy 0 was chosen: read copy 0 again.
+    if(chosen == 0)
+    {
+        sram_read(world_buffer, world_size, world_copy_offsets[0] + world_header_size);
+    }
+
+    world_ok = chosen >= 0;
+    last_world_copy = chosen;
+
+    if(! world_ok)
+    {
+        world_size = 0;
     }
 
     return true;
@@ -348,8 +425,133 @@ void erase()
     finish();
     bn::sram::set_bytes(0, header_size, 0);
     bn::sram::set_bytes(0, header_size, slot_size);
-    bn::sram::set_bytes(0, world_header_size, world_offset);
+    bn::sram::set_bytes(0, world_header_size, world_copy_offsets[0]);
+    bn::sram::set_bytes(0, world_header_size, world_copy_offsets[1]);
     last_sequence = 0;
+    last_world_copy = -1;
 }
+
+
+#if KX_BENCH == 17
+namespace
+{
+    // A block of `size` bytes tagged with its save's number: the tag, then bytes worked out from it.
+    void fill_block(writer& output, int size, uint32_t tag)
+    {
+        output.put(tag);
+
+        for(int index = 4; index < size; ++index)
+        {
+            output.put(uint8_t((index * 31) + (tag * 7)));
+        }
+    }
+
+    // The block's tag if every byte matches it, 0 if not.
+    [[nodiscard]] uint32_t check_block(reader input, int size)
+    {
+        if(input.remaining() != size)
+        {
+            return 0;
+        }
+
+        uint32_t tag = input.get<uint32_t>();
+
+        for(int index = 4; index < size; ++index)
+        {
+            if(input.get<uint8_t>() != uint8_t((index * 31) + (tag * 7)))
+            {
+                return 0;
+            }
+        }
+
+        return tag;
+    }
+
+    void write_save(int character_size, int world_size, uint32_t tag)
+    {
+        writer character = character_writer();
+        fill_block(character, character_size, tag);
+        writer world = world_writer();
+        fill_block(world, world_size, tag);
+        summary info;
+        info.valid = true;
+        info.has_survivor = true;
+        info.seed = tag;
+        commit(character, world, info, true);
+    }
+
+    alignas(4) BN_DATA_EWRAM_BSS uint8_t sram_copy[sram_size];
+}
+
+void power_cut_bench()
+{
+    // Two complete saves (2 and 3), then a third (4) cut off after every `step` bytes of its writing, from none to
+    // all of them; after each cut the save is loaded as at power on. The survivor must come back from save 3 or 4,
+    // and the world from the same save.
+    constexpr int character_size = 1200;
+    constexpr int world_sizes[] = { 4096 + 600, 9000, 14000, 20000, world_capacity };
+    constexpr int step = 61;
+
+    for(int world_size : world_sizes)
+    {
+        erase();
+        write_save(character_size, world_size, 2);
+        write_save(character_size, world_size, 3);
+        sram_read(sram_copy, sram_size, 0);
+        int total = world_size + world_header_size + character_size + header_size;
+        int same = 0;
+        int other_world = 0;
+        int fresh_world = 0;
+        int lost = 0;
+        int wrong = 0;
+
+        for(int cut = 0; cut <= total + step; cut += step)
+        {
+            bn::sram::write_span_offset(bn::span<const uint8_t>(sram_copy, sram_size), 0);
+            last_sequence = 2;          // as after the two saves (each load sets it again)
+            power_budget = cut;
+            write_save(character_size, world_size, 4);
+            power_budget = -1;
+            job_phase = phase::IDLE;
+
+            summary info;
+            bool world_ok = false;
+
+            if(! load(info, world_ok))
+            {
+                ++lost;
+                continue;
+            }
+
+            uint32_t survivor = check_block(character_reader(), character_size);
+            uint32_t world = world_ok ? check_block(world_reader(), world_size) : 0;
+
+            if(survivor != info.seed || (survivor != 3 && survivor != 4))
+            {
+                ++wrong;
+                BN_LOG("KXCUT wrong at ", cut, " of ", total, ": survivor ", survivor, " header ", info.seed);
+            }
+            else if(world == survivor)
+            {
+                ++same;
+            }
+            else if(world != 0)
+            {
+                ++other_world;
+            }
+            else
+            {
+                ++fresh_world;
+            }
+        }
+
+        BN_LOG("KXCUT world=", world_size, " cuts=", (total / step) + 2, " same=", same);
+        BN_LOG("KXCUT other_world=", other_world, " world_lost=", fresh_world, " lost=", lost, " wrong=", wrong);
+    }
+
+    erase();
+    BN_LOG("KXBENCH done");
+}
+#endif
 
 }

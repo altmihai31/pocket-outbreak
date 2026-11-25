@@ -31,6 +31,10 @@ jobs:
         working-directory: knox-gba
         run: make -j"$(nproc)" PYTHON=python3 BENCH=8
 
+      - name: Build the power-cut bench (knox_cut.gba)
+        working-directory: knox-gba
+        run: make -j"$(nproc)" PYTHON=python3 BENCH=17
+
       - name: Package
         run: |
           mkdir dist
@@ -48,7 +52,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: save-bench
-          path: knox-gba/knox_save.gba
+          path: |
+            knox-gba/knox_save.gba
+            knox-gba/knox_cut.gba
 
   save-test:
     # Plays the save bench headless in mGBA: save a world, load it, and fail if anything came back different.
@@ -67,12 +73,17 @@ jobs:
       - name: Save round trip
         run: python3 knox-gba/tools/save_roundtrip_test.py knox_save.gba --mgba /usr/games/mgba --log knox_save.log
 
+      - name: Power cut during a save
+        run: python3 knox-gba/tools/power_cut_test.py knox_cut.gba --mgba /usr/games/mgba --log knox_cut.log
+
       - name: Upload the bench log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: save-bench-log
-          path: knox_save.log
+          path: |
+            knox_save.log
+            knox_cut.log
 
   release:
     # Tags only, and only once the save test has passed.

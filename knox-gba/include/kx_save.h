@@ -16,11 +16,14 @@
 //           character
 //   0x1000  world area (28 KB): 16 B world header (magic, sequence, size, CRC) + world block (horde counts,
 //           containers, decals...)
+//   0x4800  world copy 1 (playtest 5): when a world block fits half the area (14,320 bytes) the two halves take
+//           turns, copy 0's header at 0x1000 and copy 1's here; a bigger block fills the area from 0x1000
 //
 // A save serialises both blocks into EWRAM buffers in one go (a few small copies), then writes them out: the world
 // data, the world header, then the character slot not used last. Writing can be spread over frames (autosave while
-// walking) or done at once (sleeping, quitting). The world block is checked on its own: if its write was cut off,
-// the character is kept and the world changes are lost.
+// walking) or done at once (sleeping, quitting). The world block is checked on its own, and the load takes the
+// world copy saved with the survivor's slot: a write cut off leaves the last whole save when the world fits two
+// copies; a bigger world's changes are lost (the survivor is always kept). BENCH=17 cuts saves at every point.
 namespace kx::save
 {
     constexpr int sram_size = 32 * 1024;
@@ -170,6 +173,9 @@ namespace kx::save
 
     // Forgets the save (a new world replaces it).
     void erase();
+
+    // BENCH=17: cuts the power part-way through saves and checks what loads (logs KXCUT lines).
+    void power_cut_bench();
 }
 
 #endif
