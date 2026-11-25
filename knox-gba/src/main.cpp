@@ -48,7 +48,7 @@ int main()
         [[maybe_unused]] bool replaces_save = false;
         kx::character_choice made;
 
-        #if KX_BENCH == 7 || KX_BENCH == 10 || KX_BENCH == 12 || KX_BENCH == 14 || KX_BENCH == 16
+        #if KX_BENCH == 7 || KX_BENCH == 10 || KX_BENCH == 12 || KX_BENCH == 14 || KX_BENCH == 16 || KX_BENCH == 18
             kx::world::init(0x4B4E4F58);
         #elif KX_BENCH == 8
             // Save bench: a new world saved and quit, then the same save loaded. The first pass plays with

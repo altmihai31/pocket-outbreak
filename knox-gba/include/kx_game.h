@@ -416,6 +416,10 @@ private:
     void _update_lights(int darkness);
     void _campfires_call(int hour);
 
+    #if KX_BENCH == 18
+        void _bench_door_gallery(int frame);
+    #endif
+
     #if KX_BENCH == 12
         // Doors bench script and log (see kx_game.cpp).
         void _bench_doors(int frame);

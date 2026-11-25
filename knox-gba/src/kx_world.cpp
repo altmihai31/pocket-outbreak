@@ -839,7 +839,8 @@ namespace
 {
     [[nodiscard]] bool is_door_edge(world_gfx gfx)
     {
-        return gfx >= world_gfx::DOOR_EDGE_R_CLOSED && gfx <= world_gfx::DOOR_EDGE_L_OPEN;
+        return (gfx >= world_gfx::DOOR_EDGE_R_CLOSED && gfx <= world_gfx::DOOR_EDGE_L_OPEN) ||
+               (gfx >= world_gfx::DOOR_EDGE_T_CLOSED && gfx <= world_gfx::DOOR_EDGE_T_BOARDED);
     }
 
     // Writes a canopy graphic straight into a ready chunk (derived from the door beside it, so never remembered).
@@ -851,16 +852,29 @@ namespace
         }
     }
 
+    // Playtest 7: the building the player is in, in tiles (width 0: none). Its doors' edges are not drawn: with
+    // its roof cut away the doors show in their walls, and an edge outside drew them twice.
+    int hidden_left = 0;
+    int hidden_top = 0;
+    int hidden_right = 0;
+    int hidden_bottom = 0;
+
+    [[nodiscard]] bool edges_hidden(int tile_x, int tile_y)
+    {
+        return tile_x >= hidden_left && tile_x < hidden_right && tile_y >= hidden_top && tile_y < hidden_bottom;
+    }
+
     void draw_door_edges(const chunk_slot& slot)
     {
-        // Every side door in the chunk, and those just across its left and right edges (their outside tile may be
-        // in this chunk).
+        // Every door in the chunk, those just across its left and right edges (a side door's outside tile may be in
+        // this chunk) and those just below it (a back door's).
         int left = slot.chunk_x * chunk_tiles;
         int top = slot.chunk_y * chunk_tiles;
 
-        auto side_door = [](world_gfx wall)
+        auto door = [](world_gfx wall)
         {
-            return wall >= world_gfx::DOOR_TOP_CLOSED && wall <= world_gfx::DOOR_TOP_BROKEN;
+            return (wall >= world_gfx::DOOR_FACE_CLOSED && wall <= world_gfx::DOOR_TOP_BROKEN) ||
+                   wall == world_gfx::BARRICADE_FACE || wall == world_gfx::BARRICADE_TOP;
         };
 
         const uint8_t* walls = slot.gfx[int(layer::WALLS)];
@@ -871,20 +885,28 @@ namespace
 
             for(int column = 0; column < chunk_tiles; ++column, ++index)
             {
-                if(side_door(world_gfx(walls[index])))
+                if(door(world_gfx(walls[index])))
                 {
                     static_cast<void>(update_door_edge(left + column, y));
                 }
             }
 
-            if(side_door(gfx_at(layer::WALLS, left - 1, y)))
+            if(door(gfx_at(layer::WALLS, left - 1, y)))
             {
                 static_cast<void>(update_door_edge(left - 1, y));
             }
 
-            if(side_door(gfx_at(layer::WALLS, left + chunk_tiles, y)))
+            if(door(gfx_at(layer::WALLS, left + chunk_tiles, y)))
             {
                 static_cast<void>(update_door_edge(left + chunk_tiles, y));
+            }
+        }
+
+        for(int column = 0; column < chunk_tiles; ++column)
+        {
+            if(door(gfx_at(layer::WALLS, left + column, top + chunk_tiles)))
+            {
+                static_cast<void>(update_door_edge(left + column, top + chunk_tiles));
             }
         }
     }
@@ -893,43 +915,100 @@ namespace
 bool update_door_edge(int tile_x, int tile_y)
 {
     // Playtest 5 (mockup 23, look C): a door in a side wall under a roof shows past the wall line, on the canopy of
-    // the open tile outside it: a slab of wood when closed, swung out when open, nothing when broken.
+    // the open tile outside it: a slab of wood when closed, swung out when open, nothing when broken. Playtest 7: a
+    // door in a back wall the same way, on the step above it (a front door shows under its eave's dip); a barricade
+    // in those walls as the ends of its planks; nothing while the player is in the building.
     bool side_wall;
-    door_state state = door_of(gfx_at(layer::WALLS, tile_x, tile_y), side_wall);
-
-    if(! side_wall || ! is_roof(gfx_at(layer::CANOPY, tile_x, tile_y)))
-    {
-        return false;
-    }
-
+    world_gfx wall = gfx_at(layer::WALLS, tile_x, tile_y);
+    door_state state = door_of(wall, side_wall);
+    bool boarded = wall == world_gfx::BARRICADE_FACE || wall == world_gfx::BARRICADE_TOP;
+    side_wall = boarded ? wall == world_gfx::BARRICADE_TOP : side_wall;
+    bool hidden = edges_hidden(tile_x, tile_y);
     bool changed = false;
 
-    for(int direction = -1; direction <= 1; direction += 2)
-    {
-        int outside_x = tile_x + direction;
-        world_gfx canopy = gfx_at(layer::CANOPY, outside_x, tile_y);
+    // The tiles an edge of this door can be on: right and left (side walls), above (back walls).
+    constexpr int offsets[3][2] = { { 1, 0 }, { -1, 0 }, { 0, -1 } };
 
-        // The outside: nothing overhead (or this door's edge already), and the building's inside opposite.
-        if((canopy != world_gfx::EMPTY && ! is_door_edge(canopy)) ||
-           ! is_roof(gfx_at(layer::CANOPY, tile_x - direction, tile_y)) || ! loaded(outside_x, tile_y))
+    for(int which = 0; which < 3; ++which)
+    {
+        int outside_x = tile_x + offsets[which][0];
+        int outside_y = tile_y + offsets[which][1];
+        bool side_edge = which < 2;
+        world_gfx canopy = gfx_at(layer::CANOPY, outside_x, outside_y);
+
+        if(! loaded(outside_x, outside_y) || (canopy != world_gfx::EMPTY && ! is_door_edge(canopy)))
         {
             continue;
         }
 
-        bool right = direction > 0;
-        world_gfx edge = state == door_state::CLOSED ? (right ? world_gfx::DOOR_EDGE_R_CLOSED :
-                                                                world_gfx::DOOR_EDGE_L_CLOSED) :
-                         state == door_state::OPEN ? (right ? world_gfx::DOOR_EDGE_R_OPEN :
-                                                              world_gfx::DOOR_EDGE_L_OPEN) : world_gfx::EMPTY;
+        // Only this door's edge (one pointing back at it) is changed.
+        bool ours = canopy == world_gfx::EMPTY ||
+                    (which == 0 && (canopy == world_gfx::DOOR_EDGE_R_CLOSED || canopy == world_gfx::DOOR_EDGE_R_OPEN ||
+                                    canopy == world_gfx::DOOR_EDGE_R_BOARDED)) ||
+                    (which == 1 && (canopy == world_gfx::DOOR_EDGE_L_CLOSED || canopy == world_gfx::DOOR_EDGE_L_OPEN ||
+                                    canopy == world_gfx::DOOR_EDGE_L_BOARDED)) ||
+                    (which == 2 && (canopy == world_gfx::DOOR_EDGE_T_CLOSED || canopy == world_gfx::DOOR_EDGE_T_OPEN ||
+                                    canopy == world_gfx::DOOR_EDGE_T_BOARDED));
+
+        if(! ours)
+        {
+            continue;
+        }
+
+        // An edge only for a door in this kind of wall under a roof, with the building's inside opposite.
+        world_gfx edge = world_gfx::EMPTY;
+
+        bool shown = boarded || (state != door_state::NONE && state != door_state::BROKEN);
+
+        if(shown && side_wall == side_edge && ! hidden && is_roof(gfx_at(layer::CANOPY, tile_x, tile_y)) &&
+           is_roof(gfx_at(layer::CANOPY, tile_x - offsets[which][0], tile_y - offsets[which][1])))
+        {
+            bool closed = state == door_state::CLOSED;
+            edge = boarded ? (which == 0 ? world_gfx::DOOR_EDGE_R_BOARDED :
+                              which == 1 ? world_gfx::DOOR_EDGE_L_BOARDED : world_gfx::DOOR_EDGE_T_BOARDED) :
+                   which == 0 ? (closed ? world_gfx::DOOR_EDGE_R_CLOSED : world_gfx::DOOR_EDGE_R_OPEN) :
+                   which == 1 ? (closed ? world_gfx::DOOR_EDGE_L_CLOSED : world_gfx::DOOR_EDGE_L_OPEN) :
+                                (closed ? world_gfx::DOOR_EDGE_T_CLOSED : world_gfx::DOOR_EDGE_T_OPEN);
+        }
 
         if(edge != canopy)
         {
-            set_canopy_now(outside_x, tile_y, edge);
+            set_canopy_now(outside_x, outside_y, edge);
             changed = true;
         }
     }
 
     return changed;
+}
+
+void hide_door_edges(int left, int top, int width, int height)
+{
+    // The doors in the walls round the old rectangle and the new one get their edges worked out again.
+    int old_left = hidden_left;
+    int old_top = hidden_top;
+    int old_right = hidden_right;
+    int old_bottom = hidden_bottom;
+    hidden_left = left;
+    hidden_top = top;
+    hidden_right = left + width;
+    hidden_bottom = top + height;
+
+    auto walls = [](int x0, int y0, int x1, int y1)
+    {
+        for(int y = y0; y < y1; ++y)
+        {
+            for(int x = x0; x < x1; ++x)
+            {
+                if(y == y0 || y == y1 - 1 || x == x0 || x == x1 - 1)
+                {
+                    static_cast<void>(update_door_edge(x, y));
+                }
+            }
+        }
+    };
+
+    walls(old_left, old_top, old_right, old_bottom);
+    walls(hidden_left, hidden_top, hidden_right, hidden_bottom);
 }
 
 bool set_wall_gfx(int tile_x, int tile_y, world_gfx gfx, bool restore)

@@ -274,6 +274,11 @@ namespace
         { 220, 0, 0, 0, button_a, 30 },
         { 718, 0, 0, 0, 0, 0 },
     };
+#elif KX_BENCH == 18
+    // Door gallery (make BENCH=18, playtest 7): the game's script places the survivor; it stands still.
+    constexpr bench_segment bench_route[] = {
+        { 9000, 0, 0, 0, 0, 0 },
+    };
 #elif KX_BENCH == 16
     // Animal census (make BENCH=16, animals plan stage 7) on the fixed seed: the game's script moves the survivor and
     // the clock; the survivor stands still.

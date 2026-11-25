@@ -124,10 +124,14 @@ void set_ground_gfx(int tile_x, int tile_y, world_gfx gfx);
 // false if there is no room to remember it. The caller refreshes the renderer.
 bool set_wall_gfx(int tile_x, int tile_y, world_gfx gfx, bool restore = false);
 
-// Playtest 5: a side door's edge, drawn on the canopy of the tile outside it, follows the door's state. Called for
-// each chunk as it is generated and whenever a wall graphic changes; true if an edge changed (the caller refreshes
-// the tiles either side of the door).
+// Playtest 5: a side door's edge (playtest 7: a back door's too), drawn on the canopy of the tile outside it, follows
+// the door's state. Called for each chunk as it is generated and whenever a wall graphic changes; true if an edge
+// changed (the caller refreshes the tiles beside and above the door).
 bool update_door_edge(int tile_x, int tile_y);
+
+// Playtest 7: no door edges round this rectangle of tiles (the building the player is in; width 0: none), whose
+// roof is cut away. The caller refreshes the tiles round the old and the new rectangle.
+void hide_door_edges(int left, int top, int width, int height);
 
 [[nodiscard]] inline world_gfx wall_gfx(int tile_x, int tile_y)
 {

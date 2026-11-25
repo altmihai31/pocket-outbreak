@@ -1320,6 +1320,42 @@ def gfx_door_edge(right, opened):
     return g
 
 
+def gfx_door_edge_top(opened):
+    """Playtest 7: a door in a back wall (the top wall, outside to the north) seen past the roof's edge, on the
+    canopy of the step outside it: a 4 px slab of wood along the bottom of the tile when closed, the door swung out
+    up the left side of the step when open."""
+    g = blank(16, 16, W_TRANS)
+    if opened:
+        for y in range(2, 16):
+            g[y][1] = W_DARK
+            g[y][2] = W_WOOD
+            g[y][3] = W_WOOD
+            g[y][4] = W_DARK
+        g[2][2] = g[2][3] = W_DARK
+    else:
+        for y in range(12, 16):
+            for x in range(1, 15):
+                g[y][x] = W_DARK if x in (1, 14) or y == 12 else W_WOOD
+    return g
+
+
+def gfx_door_edge_boarded(where):
+    """Playtest 7: a barricade in a side or back wall seen past the wall line: the ends of two planks, 6 px out.
+    where: 'R' or 'L' (a side wall, the tile beside it), 'T' (a back wall, the step above it)."""
+    g = blank(16, 16, W_TRANS)
+    for first in (2, 10):
+        for a in range(first, first + 4):
+            for b in range(0, 6):
+                edge = a in (first, first + 3) or b == 5
+                if where == 'T':
+                    g[15 - b][a] = W_DARK if edge else W_WOOD
+                else:
+                    g[a][b] = W_DARK if edge else W_WOOD
+    if where == 'L':
+        g = [row[::-1] for row in g]
+    return g
+
+
 # Playtest 1: doorways in outer walls are roofed; one in the front wall gets an eave that dips over it.
 WORLD_GFX_LATE = [('ROOF_%s_EAVE_DOOR' % name, grained('ROOF_%s_EAVE_DOOR' % name, gfx_roof_eave_door(colour, shade)))
                   for name, colour, shade in (('RED', W_BRICK, W_MORTAR), ('GREY', W_PAVE_D, W_ROAD))]
@@ -1327,6 +1363,10 @@ WORLD_GFX_LATE = [('ROOF_%s_EAVE_DOOR' % name, grained('ROOF_%s_EAVE_DOOR' % nam
 # Playtest 5: side doors' edges past the wall line (after the eave doors, so saved ids stay put).
 WORLD_GFX_LATE += [('DOOR_EDGE_%s_%s' % (side, state), gfx_door_edge(side == 'R', state == 'OPEN'))
                    for side in ('R', 'L') for state in ('CLOSED', 'OPEN')]
+
+# Playtest 7: back doors' edges past the roof line, the same way (after the side doors', so saved ids stay put).
+WORLD_GFX_LATE += [('DOOR_EDGE_T_%s' % state, gfx_door_edge_top(state == 'OPEN')) for state in ('CLOSED', 'OPEN')]
+WORLD_GFX_LATE += [('DOOR_EDGE_%s_BOARDED' % where, gfx_door_edge_boarded(where)) for where in ('R', 'L', 'T')]
 
 # Walls graphics drawn with the decal bank's colours (bank 1): a dead survivor lying where they fell.
 WORLD_GFX_DECAL_BANK = [('BODY', None)]
