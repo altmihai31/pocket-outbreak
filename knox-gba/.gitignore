@@ -1,0 +1,6 @@
+build*/
+*.gba
+*.elf
+*.elf.*
+*.sav
+__pycache__/
