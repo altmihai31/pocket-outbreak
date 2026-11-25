@@ -4,17 +4,18 @@
     python tools/power_cut_test.py --check-log kx.log     (only check a log made earlier)
 
 The bench writes two complete saves, then cuts the power after every 61 bytes of a third and loads what is left, for
-world blocks of several sizes. For each size it logs:
+world blocks of several sizes, filled with a pattern that packs well and with noise that doesn't (playtest 6: world
+blocks are stored packed, so "stored" is what the block took in SRAM). For each case it logs:
 
-    KXCUT world=<bytes> cuts=<n> same=<n>
+    KXCUT world=<bytes> <pattern|noise> stored=<bytes> cuts=<n> same=<n>
     KXCUT other_world=<n> world_lost=<n> lost=<n> wrong=<n>
 
 same: the survivor and the world came back from the same save. other_world: from different saves. world_lost: the
 survivor came back, the world didn't (a fresh world from the seed). lost: no survivor. wrong: a survivor that doesn't
 check out (broken data that loaded).
 
-Passes when no cut loses or breaks the survivor, and every cut keeps the whole save while the world block fits the
-two-copy limit (half the world area, 14,320 bytes).
+Passes when no cut loses or breaks the survivor, and every cut keeps the whole save while the stored world block fits
+the two-copy limit (half the world area, 14,320 bytes).
 
 Exit code 0 when everything holds, 1 with a list of what didn't.
 """
@@ -28,7 +29,7 @@ import sys
 from save_roundtrip_test import read_lines, run_bench, DONE
 
 TWO_COPY_LIMIT = 14320
-HEAD = re.compile(r'^KXCUT world=(\d+) cuts=(\d+) same=(\d+)$')
+HEAD = re.compile(r'^KXCUT world=(\d+) (pattern|noise) stored=(\d+) cuts=(\d+) same=(\d+)$')
 TAIL = re.compile(r'^KXCUT other_world=(\d+) world_lost=(\d+) lost=(\d+) wrong=(\d+)$')
 
 
@@ -49,16 +50,17 @@ def check(lines):
             failures.append('unreadable lines:\n    %s\n    %s' % (head, tail))
             continue
 
-        world, cuts, same = (int(value) for value in top.groups())
+        world, fill, stored, cuts, same = (value if index == 1 else int(value)
+                                           for index, value in enumerate(top.groups()))
         other, world_lost, lost, wrong = (int(value) for value in bottom.groups())
-        results.append((world, cuts, same, other, world_lost, lost, wrong))
+        name = 'world %d bytes (%s, stored %d)' % (world, fill, stored)
+        results.append((name, cuts, same, other, world_lost, lost, wrong))
 
         if lost or wrong:
-            failures.append('world %d bytes: %d cuts lost the survivor, %d loaded a broken one' % (world, lost, wrong))
+            failures.append('%s: %d cuts lost the survivor, %d loaded a broken one' % (name, lost, wrong))
 
-        if world <= TWO_COPY_LIMIT and same != cuts:
-            failures.append('world %d bytes (fits two copies): only %d of %d cuts kept the whole save'
-                            % (world, same, cuts))
+        if stored <= TWO_COPY_LIMIT and same != cuts:
+            failures.append('%s fits two copies: only %d of %d cuts kept the whole save' % (name, same, cuts))
 
     if not results:
         failures.append('no KXCUT results in the log')
@@ -93,9 +95,9 @@ def main():
 
     results, failures = check(read_lines(log_path))
 
-    for world, cuts, same, other, world_lost, lost, wrong in results:
-        print('world %5d bytes: %3d cuts, %3d whole save, %3d mixed, %3d world lost, %d survivor lost, %d broken'
-              % (world, cuts, same, other, world_lost, lost, wrong))
+    for name, cuts, same, other, world_lost, lost, wrong in results:
+        print('%-42s %3d cuts, %3d whole save, %3d mixed, %3d world lost, %d survivor lost, %d broken'
+              % (name, cuts, same, other, world_lost, lost, wrong))
 
     if failures:
         print('FAIL:')

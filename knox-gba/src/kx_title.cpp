@@ -575,11 +575,9 @@ namespace
         pixels.rect(world_panel_left + 4, world_panel_top + 25, world_panel_width - 8, 1, colour::border);
         pixels.text_centered(center_x, world_panel_top + 29, "SANDBOX", colour::quiet);
 
-        // Under the panel, a full-width dark strip (playtest 6: the hints wrapped onto two lines over the moving
-        // map): with a save, the warning that the new world replaces it on its own line, then one row of hints.
+        // Under the panel (playtest 6: the hints wrapped onto two lines): with a save, the warning that the new
+        // world replaces it on its own line, then one row of hints, straight on the darkened map like the title's.
         constexpr int strip_top = world_panel_top + world_panel_height + 2;
-        pixels.rect(0, strip_top, canvas::width, canvas::height - strip_top, colour::fill);
-        pixels.rect(0, strip_top, canvas::width, 1, colour::border);
 
         if(replaces)
         {

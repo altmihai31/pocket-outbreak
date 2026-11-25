@@ -382,7 +382,7 @@ The save holds the seed plus everything the player changed, about 22 KB of the 3
 | Timeline and events | 64 B | shutoff days, event flags, broadcasts heard |
 | Total | \~21.5 KB | \~10 KB spare |
 
-**Saving:** autosave on sleeping and on quitting from the menu, plus every in-game hour while walking. One world slot with a CRC that detects a cut-off write. The header and character block (about 1 KB) are double-buffered in the spare space, so a failed save loses at most the world changes since the last one, never the character. Caps (items, chunks, pieces) show in the UI when close to full (the pause menu's save line shows `WORLD n%` above 80%, a toast warns once at 90%).
+**Saving:** autosave on sleeping and on quitting from the menu, plus every in-game hour while walking. The world block is stored LZ77-packed (playtest 6: a 23 KB world takes about 10 KB) in one of two copies, each half the world area, written in turn and each with a CRC, so a cut-off write leaves the other copy; a block that doesn't pack into half is stored as is across the whole area. The header and character block (about 1 KB) are double-buffered in the spare space, so a failed save loses at most the world changes since the last one, never the character. Caps (items, chunks, pieces) show in the UI when close to full (the pause menu's save line shows `WORLD n%` above 80%, a toast warns once at 90%).
 
 **Permadeath:** on death the character block is cleared and the world stays. A new survivor starts in a random low-tier town; the dead one is placed as a zombie carrying their gear.
 

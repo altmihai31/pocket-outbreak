@@ -330,17 +330,41 @@ void game::_save(bool at_once)
         }
     }
 
+    #if KX_BENCH
+        // The world block's parts' sizes (playtest 6: what keeps big worlds from fitting two copies).
+        int part_start = world.size();
+        auto part = [&](const char* name)
+        {
+            BN_LOG("KXSAVEPART ", name, " ", world.size() - part_start);
+            part_start = world.size();
+        };
+    #else
+        auto part = [](const char*) {};
+    #endif
+
+    part("hordes");
     _containers.save(world);
+    part("containers");
     world::save_decals(world);
+    part("decals");
     survivors::save(world);
+    part("survivors");
     base::save(world);
+    part("base");
     farm::save(world);
+    part("farm");
     power::save(world);
+    part("power");
     traps::save(world);
+    part("traps");
     _events.save(world);
+    part("events");
     _vehicles.save(world);
+    part("vehicles");
     world_map::save(world);
+    part("map");
     _animals.save(world);
+    part("animals");
 
     save::summary info;
     info.valid = true;

@@ -53,12 +53,20 @@ namespace
     }
 
 
-    // The two panels fill the frame and are as tall as each other (playtest 6); the container's slots sit centred.
+    // Each panel fits its grid (playtest 6: the container's panel filled the frame's height and width around its
+    // smaller grid, which left dark space round the slots).
+    [[nodiscard]] constexpr int panel_height(int rows)
+    {
+        return (slots_top - panels_top) + (rows * slot_step) - 2 + padding + 1;
+    }
+
     constexpr int container_left = screen_left;
-    constexpr int container_width = screen_width - panel_width(carried_columns) - panel_gap;
-    constexpr int container_shift = (container_width - panel_width(container_columns)) / 2;
-    constexpr int carried_left = container_left + container_width + panel_gap;
-    constexpr int panels_height = (slots_top - panels_top) + (carried_rows * slot_step) - 2 + padding + 1;
+    constexpr int container_width = panel_width(container_columns) + 2;
+    constexpr int container_shift = 1;          // centres the slots in the panel's borders
+    constexpr int container_height = panel_height(container_rows);
+    constexpr int carried_left = screen_left + screen_width - panel_width(carried_columns);  // ends with the frame
+    static_assert(carried_left >= container_left + container_width + panel_gap);
+    constexpr int panels_height = panel_height(carried_rows);
     static_assert(container_rows <= carried_rows);
     static_assert(panels_top + panels_height < info_top);
 
@@ -575,8 +583,8 @@ void search_screen::_draw_left(game& owner)
     _draw_header(owner);
 
     // Container panel.
-    pixels.panel(container_left, panels_top, container_width, panels_height, colour::fill, colour::border);
-    pixels.text(container_left + 1 + padding, title_y, table.short_name, colour::quiet);
+    pixels.panel(container_left, panels_top, container_width, container_height, colour::fill, colour::border);
+    pixels.text(container_left + 1 + padding + container_shift, title_y, table.short_name, colour::quiet);
 
     for(int slot = 0; slot < container::capacity; ++slot)
     {

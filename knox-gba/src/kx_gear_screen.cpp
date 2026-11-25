@@ -51,6 +51,10 @@ namespace
     constexpr int hotbar_slot_shift = 1;        // centres the slots in the wider panel
     constexpr int worn_width = panel_width(worn_columns) + 2;
     constexpr int worn_slot_shift = 1;
+    constexpr int worn_rows = (worn_count + worn_columns - 1) / worn_columns;
+
+    // Playtest 6: the worn panel fits its three rows (it was as tall as the pack, with a blank row under them).
+    constexpr int worn_height = (slots_top - panels_top) + (worn_rows * slot_step) - 2 + padding + 1;
     constexpr int worn_left = info_left;
     constexpr int carried_left = worn_left + worn_width + panel_gap;
     constexpr int hotbar_left = carried_left + panel_width(carried_columns) + hotbar_gap;
@@ -400,7 +404,7 @@ void gear_screen::_draw(game& owner)
     screen.tab_bar(0);
 
     // Worn and held.
-    pixels.panel(worn_left, panels_top, worn_width, panels_height, colour::fill, colour::border);
+    pixels.panel(worn_left, panels_top, worn_width, worn_height, colour::fill, colour::border);
     pixels.text(worn_left + 1 + padding + worn_slot_shift, title_y, "WORN", colour::quiet);
 
     for(int slot = 0; slot < worn_count; ++slot)
