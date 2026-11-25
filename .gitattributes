@@ -1,0 +1,13 @@
+# Store text with LF line endings; Git converts on checkout where the OS wants CRLF.
+* text=auto
+
+# PowerShell scripts keep CRLF so they run cleanly on Windows.
+*.ps1 text eol=crlf
+
+# Binary assets: never touch line endings or try to diff them.
+*.png binary
+*.bmp binary
+*.wav binary
+*.mod binary
+*.gba binary
+*.sav binary
