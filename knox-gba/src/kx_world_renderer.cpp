@@ -487,6 +487,12 @@ void world_renderer::refresh_tile(int tile_x, int tile_y)
     }
 }
 
+void world_renderer::refresh_rect(int tile_left, int tile_top, int tile_width, int tile_height)
+{
+    _redraw_rect(tile_left * 2, tile_top * 2, (tile_left + tile_width) * 2, (tile_top + tile_height) * 2,
+                 int(world::layer::CANOPY));
+}
+
 #if KX_BENCH
     int world_renderer::verify() const
     {

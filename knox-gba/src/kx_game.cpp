@@ -256,7 +256,7 @@ game::game(bool load_save, const character_choice* choice) :
         _god_mode = true;
 
         #if KX_BENCH == 3 || KX_BENCH == 9 || KX_BENCH == 11 || KX_BENCH == 12 || KX_BENCH == 13 || KX_BENCH == 14 || \
-            KX_BENCH == 15 || KX_BENCH == 16
+            KX_BENCH == 15 || KX_BENCH == 16 || KX_BENCH == 18
             // No zombies: the loot bench only searches; the vehicles and guns benches place their own.
         #elif KX_BENCH == 2
             _zombies.spawn(tile_feet(spawn_tile_x + 4, spawn_tile_y), _random);
@@ -1740,6 +1740,10 @@ game_exit game::run()
                             _bench_animal_census(bench_frame);
                         #endif
 
+                        #if KX_BENCH == 18
+                            _bench_door_gallery(bench_frame);
+                        #endif
+
                         #if KX_BENCH == 12
                             _bench_doors(bench_frame);
                             _bench_notes(bench_frame);
@@ -2349,8 +2353,33 @@ void game::_update_play()
         _roof_tile_x = feet_tile_x;
         _roof_tile_y = feet_tile_y;
         bool was_inside = _inside;
+        int old_left = _building_left;
+        int old_top = _building_top;
+        int old_width = _inside ? _building_width : 0;
+        int old_height = _building_height;
         _inside = world::building_over(feet_tile_x, feet_tile_y, _building_left, _building_top, _building_width,
                                        _building_height);
+
+        // Playtest 7: inside, the building's doors show in their walls, so their edges outside go.
+        int new_width = _inside ? _building_width : 0;
+
+        if(new_width != old_width || (_inside && (_building_left != old_left || _building_top != old_top)))
+        {
+            world::hide_door_edges(_building_left, _building_top, new_width, _building_height);
+
+            for(int pass = 0; pass < 2; ++pass)
+            {
+                int left = pass ? _building_left : old_left;
+                int top = pass ? _building_top : old_top;
+                int width = pass ? new_width : old_width;
+                int height = pass ? _building_height : old_height;
+
+                if(width)
+                {
+                    _renderer.refresh_rect(left - 1, top - 1, width + 2, height + 2);
+                }
+            }
+        }
 
         // Milestone 14: a smashed window's glass crunches underfoot (quietly when sneaking).
         world_gfx under = world::wall_gfx(feet_tile_x, feet_tile_y);
@@ -4895,14 +4924,10 @@ void game::refresh_tile(int tile_x, int tile_y)
 {
     _renderer.refresh_tile(tile_x, tile_y);
 
-    // A side door's edge outside it follows the door (playtest 5).
-    bool side_wall;
-
-    if(world::door_of(world::wall_gfx(tile_x, tile_y), side_wall) != world::door_state::NONE && side_wall)
-    {
-        _renderer.refresh_tile(tile_x - 1, tile_y);
-        _renderer.refresh_tile(tile_x + 1, tile_y);
-    }
+    // A door's edge outside it follows the door (playtest 5), and goes when it is barricaded (playtest 7).
+    _renderer.refresh_tile(tile_x - 1, tile_y);
+    _renderer.refresh_tile(tile_x + 1, tile_y);
+    _renderer.refresh_tile(tile_x, tile_y - 1);
 }
 
 void game::bash(int tile_x, int tile_y, const bn::fixed_point& from)
@@ -4916,7 +4941,12 @@ void game::bash(int tile_x, int tile_y, const bn::fixed_point& from)
         sfx::play(sfx::id::BANG, milli(700), pan);
         noise(from, base_tuning::bang_noise);
 
-        if(base::damage_barricade(*this, tile_x, tile_y, base_tuning::zombie_damage))
+        // Barricades hold far longer than built doors and log walls (playtest 8).
+        piece_kind kind = piece_kind::BARRICADE;
+        static_cast<void>(base::find(tile_x, tile_y, kind));
+        int damage = kind == piece_kind::BARRICADE ? base_tuning::barricade_damage : base_tuning::zombie_damage;
+
+        if(base::damage_barricade(*this, tile_x, tile_y, damage))
         {
             sfx::play(sfx::id::HIT_HEAVY, 1, pan);
         }
@@ -7862,5 +7892,408 @@ struct tally
     }
 }
 
+}
+#endif
+
+#if KX_BENCH == 18
+#include "bn_sram.h"
+
+namespace kx
+{
+    bool game::_bench_build_gallery(int index, bool setup, int door_x, int door_y, int& shot)
+    {
+        // Build mode (playtest 8), after the doors: the build bar and boxes for the pieces the playtest flagged, and
+        // a barricade at several healths, by a window in the front wall of the house with the front door. Each
+        // shot sets up at its first frame and is photographed 45 frames later; false once all are taken.
+        constexpr int shots = 9;
+        static const char* names[shots] = {
+            "BUILD / BARRICADE WINDOW / ENOUGH", "BUILD / BARRICADE WINDOW / NO PLANKS", "BUILD / LOG WALL / 2 OF 4 LOGS",
+            "BUILD / RAIN COLLECTOR", "BUILD / WOODEN DOOR", "BUILD / MEND BARRICADE",
+            "BARRICADE 100%", "BARRICADE 50%", "BARRICADE 20%" };
+        static int window_x = -1;
+        static int window_y = -1;
+
+        // First a visit to the front door, so its house is loaded, and a look for the window.
+        if(index == 0)
+        {
+            if(setup)
+            {
+                _player.teleport(bn::fixed_point((door_x * world::tile_size) + 8, ((door_y + 2) * world::tile_size) + 12));
+                return true;
+            }
+        }
+        else
+        {
+            --index;
+        }
+
+        if(index < 0 || index >= shots)
+        {
+            return false;
+        }
+
+        if(window_x < 0)
+        {
+            for(int y = door_y - 6; y <= door_y + 6 && window_x < 0; ++y)
+            {
+                for(int x = door_x - 12; x <= door_x + 12 && window_x < 0; ++x)
+                {
+                    world_gfx wall = world::wall_gfx(x, y);
+                    if(wall == world_gfx::WINDOW_FACE || wall == world_gfx::WINDOW_TOP)
+                    {
+                        BN_LOG("KXGALLERY window ", x, ",", y, " face=", wall == world_gfx::WINDOW_FACE,
+                               " roof below=", world::under_roof(x, y + 1), " loaded=", world::loaded(x, y));
+                    }
+
+                    if(wall == world_gfx::WINDOW_FACE)
+                    {
+                        window_x = x;
+                        window_y = y;
+                    }
+                }
+            }
+
+            BN_LOG("KXGALLERY build window ", window_x, ",", window_y, " door ", door_x, ",", door_y);
+            return true;
+        }
+
+        if(! setup)
+        {
+            char name[48];
+            int length = 0;
+
+            for(const char* part = names[index]; *part && length < 47; ++part)
+            {
+                name[length++] = *part;
+            }
+
+            name[length] = 0;
+
+            ++shot;
+            bn::sram::write_span_offset(bn::span<const uint8_t>(reinterpret_cast<const uint8_t*>(name), length + 1),
+                                        16);
+            bn::sram::write_offset(uint8_t(shot), 0);
+            BN_LOG("KXGALLERY shot ", shot, " ", name);
+            return true;
+        }
+
+        inventory& items = _player.items();
+
+        for(item_id id : { item_id::PLANKS, item_id::NAILS, item_id::LOGS, item_id::GARBAGE_BAG, item_id::HINGE,
+                           item_id::DOORKNOB })
+        {
+            items.remove(id, items.count(id));
+        }
+
+        if(index == 0)
+        {
+            while(_player.skills().level(skill::CARPENTRY) < 3)
+            {
+                static_cast<void>(_player.skills().add_xp(skill::CARPENTRY, 1000));
+            }
+
+            item_stack hammer = make_stack(item_id::HAMMER);
+            static_cast<void>(items.add(hammer));
+        }
+
+        auto give = [&](item_id id, int amount)
+        {
+            item_stack value = make_stack(id, amount);
+            static_cast<void>(items.add(value));
+        };
+
+        // The survivor stands two tiles below the window, facing away.
+        _zombies.clear();
+        _player.teleport(bn::fixed_point((window_x * world::tile_size) + 8, ((window_y + 2) * world::tile_size) + 12));
+        _player.face(0, 1);
+
+        if(index < 6)
+        {
+            if(! _build.active())
+            {
+                begin_build();
+            }
+
+            give(item_id::NAILS, 20);
+
+            switch(index)
+            {
+
+            case 0:
+                give(item_id::PLANKS, 12);
+                _build.bench_aim(piece_kind::BARRICADE, window_x, window_y);
+                break;
+
+            case 1:
+                _build.bench_aim(piece_kind::BARRICADE, window_x, window_y);
+                break;
+
+            case 2:
+                give(item_id::LOGS, 2);
+                _build.bench_aim(piece_kind::LOG_WALL, window_x + 1, window_y + 2);
+                break;
+
+            case 3:
+                give(item_id::PLANKS, 12);
+                give(item_id::GARBAGE_BAG, 1);
+                _build.bench_aim(piece_kind::RAIN_COLLECTOR, window_x + 1, window_y + 2);
+                break;
+
+            case 4:
+                give(item_id::PLANKS, 12);
+                give(item_id::HINGE, 1);
+                give(item_id::DOORKNOB, 1);
+                _build.bench_aim(piece_kind::WOODEN_DOOR, door_x, door_y);
+                break;
+
+            default:
+            {
+                // Mend: a barricade on the window, worn down to 40%, and planks for the repair.
+                give(item_id::PLANKS, 12);
+                const char* problem = _build.place(*this, piece_kind::BARRICADE, window_x, window_y);
+                BN_LOG("KXGALLERY barricade placed: ", problem ? problem : "OK");
+                int full = 0;
+                int health = base::barricade_health(window_x, window_y, full);
+                static_cast<void>(base::damage_barricade(*this, window_x, window_y, health - ((full * 4) / 10)));
+                give(item_id::PLANKS, 12);
+                _build.bench_aim(piece_kind::BARRICADE, window_x, window_y);
+                break;
+            }
+            }
+        }
+        else
+        {
+            // The barricade from outside at 100%, 50% and 20%.
+            if(_build.active())
+            {
+                _build.close(*this);
+            }
+
+            int full = 0;
+            int health = base::barricade_health(window_x, window_y, full);
+            int percent = index == 6 ? 100 : index == 7 ? 50 : 20;
+            base::repair_barricade(window_x, window_y, false);
+            health = base::barricade_health(window_x, window_y, full);
+            static_cast<void>(base::damage_barricade(*this, window_x, window_y, health - ((full * percent) / 100)));
+            BN_LOG("KXGALLERY barricade health ", base::barricade_health(window_x, window_y, full), "/", full);
+            refresh_tile(window_x, window_y);
+        }
+
+        return true;
+    }
+
+    void game::_bench_door_gallery(int frame)
+    {
+        // Door looks (playtest 7): every kind of door on the fixed seed in every state, seen from both sides, for
+        // tools/door_gallery.py to photograph. Houses of the start settlement are visited until a door of each kind
+        // is found; then each shot sets the door's state, stands the survivor two tiles off it and, once the screen
+        // has settled, writes the shot's number and name to SRAM (byte 0 the number, from 16 the name).
+        enum kind { SIDE_OUT_RIGHT, SIDE_OUT_LEFT, FACE_OUT_BELOW, FACE_OUT_ABOVE, SIDE_INSIDE, FACE_INSIDE, KINDS };
+        static const char* kind_names[KINDS] = { "SIDE DOOR OUT RIGHT", "SIDE DOOR OUT LEFT", "FRONT DOOR",
+                                                 "BACK DOOR", "INNER SIDE DOOR", "INNER FRONT DOOR" };
+        static int door_x[KINDS];
+        static int door_y[KINDS];
+        static bool found[KINDS];
+        static uint16_t houses[64];
+        static int house_count = 0;
+        static int house = 0;
+        static int shot = 0;
+        constexpr int visit_frames = 90;
+        constexpr int shot_frames = 50;
+        constexpr int states = 4;           // closed (locked looks the same), open, barricaded (over the open door), broken
+        constexpr int views = 2;            // from the outside (or one side), from the inside (the other)
+        static int scan_end = 0;
+
+        auto found_all = [&]()
+        {
+            for(bool value : found)
+            {
+                if(! value)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        };
+
+        auto scan = [&]()
+        {
+            int centre_x = _player.position().x().integer() >> world::tile_shift;
+            int centre_y = _player.position().y().integer() >> world::tile_shift;
+
+            for(int y = centre_y - 30; y <= centre_y + 30; ++y)
+            {
+                for(int x = centre_x - 30; x <= centre_x + 30; ++x)
+                {
+                    bool side;
+
+                    if(! world::loaded(x, y) || world::door_of(world::wall_gfx(x, y), side) == world::door_state::NONE)
+                    {
+                        continue;
+                    }
+
+                    int dx = side ? 1 : 0;
+                    int dy = side ? 0 : 1;
+                    bool after = world::under_roof(x + dx, y + dy);
+                    bool before = world::under_roof(x - dx, y - dy);
+                    int which = after && before ? (side ? SIDE_INSIDE : FACE_INSIDE) :
+                                ! after && before ? (side ? SIDE_OUT_RIGHT : FACE_OUT_BELOW) :
+                                after && ! before ? (side ? SIDE_OUT_LEFT : FACE_OUT_ABOVE) : -1;
+
+                    if(which >= 0 && ! found[which])
+                    {
+                        found[which] = true;
+                        door_x[which] = x;
+                        door_y[which] = y;
+                        BN_LOG("KXGALLERY found ", kind_names[which], " at ", x, ",", y);
+                    }
+                }
+            }
+        };
+
+        if(frame == 1)
+        {
+            uint16_t ids[64];
+            kx::building kinds[64];
+
+            for(int town = 0; town < macro::settlement_count() && house_count < 64; ++town)
+            {
+                int count = world::settlement_buildings(town, ids, kinds, 64);
+
+                for(int index = 0; index < count && house_count < 64; ++index)
+                {
+                    int x;
+                    int y;
+
+                    if((kinds[index] == kx::building::SMALL_HOUSE || kinds[index] == kx::building::LARGE_HOUSE) &&
+                       world::house_door(ids[index], x, y))
+                    {
+                        houses[house_count++] = ids[index];
+                    }
+                }
+            }
+
+            BN_LOG("KXGALLERY houses ", house_count);
+            bn::sram::set_bytes(0, 64, 0);
+        }
+
+        // Visiting houses until every kind of door is found.
+        if(scan_end == 0)
+        {
+            if(frame % visit_frames == 2)
+            {
+                if(found_all() || house >= house_count)
+                {
+                    scan_end = frame;
+                    BN_LOG("KXGALLERY scan done after ", house, " houses");
+                }
+                else
+                {
+                    int x;
+                    int y;
+                    static_cast<void>(world::house_door(houses[house++], x, y));
+                    _player.teleport(bn::fixed_point((x * world::tile_size) + 8, (y * world::tile_size) + 40));
+                }
+            }
+            else if(frame % visit_frames == 80)
+            {
+                scan();
+            }
+
+            return;
+        }
+
+        int step = frame - scan_end - 1;
+
+        if(step < 0 || (step % shot_frames != 0 && step % shot_frames != shot_frames - 5))
+        {
+            return;
+        }
+
+        int index = step / shot_frames;
+        int present[KINDS];
+        int present_count = 0;
+
+        for(int value = 0; value < KINDS; ++value)
+        {
+            if(found[value])
+            {
+                present[present_count++] = value;
+            }
+        }
+
+        int which = index / (states * views) < present_count ? present[index / (states * views)] : KINDS;
+        int state = (index / views) % states;
+        int view = index % views;
+
+        if(which >= KINDS && _bench_build_gallery(index - (present_count * states * views), step % shot_frames == 0,
+                                                  door_x[FACE_OUT_BELOW], door_y[FACE_OUT_BELOW], shot))
+        {
+            return;
+        }
+
+        if(which >= KINDS)
+        {
+            if(step % shot_frames == 0 && shot >= 0)
+            {
+                BN_LOG("KXGALLERY done ", shot, " shots");
+                bn::sram::write_offset(uint8_t(255), 0);
+                shot = -1;
+            }
+
+            return;
+        }
+
+        int x = door_x[which];
+        int y = door_y[which];
+        bool side = which == SIDE_OUT_RIGHT || which == SIDE_OUT_LEFT || which == SIDE_INSIDE;
+        static const char* state_names[states] = { "CLOSED", "OPEN", "BARRICADED", "BROKEN" };
+
+        if(step % shot_frames == 0)
+        {
+            // The door's state.
+            world_gfx gfx = state == 0 ? world::door_gfx(world::door_state::CLOSED, side) :
+                            state == 1 ? world::door_gfx(world::door_state::OPEN, side) :
+                            state == 3 ? world::door_gfx(world::door_state::BROKEN, side) :
+                                         (side ? world_gfx::BARRICADE_TOP : world_gfx::BARRICADE_FACE);
+            static_cast<void>(world::set_wall_gfx(x, y, gfx));
+            refresh_tile(x, y);
+
+            // Where to stand: two tiles out on the outside (the side with no roof; for an inner door, below or
+            // right), then two tiles in.
+            int dx = side ? 1 : 0;
+            int dy = side ? 0 : 1;
+            int out = which == SIDE_OUT_LEFT || which == FACE_OUT_ABOVE ? -1 : 1;
+            int sign = view == 0 ? out : -out;
+            int stand_x = x + (dx * 2 * sign);
+            int stand_y = y + (dy * 2 * sign);
+            _zombies.clear();
+            _player.teleport(bn::fixed_point((stand_x * world::tile_size) + 8, (stand_y * world::tile_size) + 12));
+            _player.face(stand_x - x, stand_y - y);       // facing away: no prompt over the door
+        }
+        else
+        {
+            char name[48];
+            int length = 0;
+
+            for(const char* part : { kind_names[which], " / ", state_names[state], " / ",
+                                     view == 0 ? (which >= SIDE_INSIDE ? "FROM BELOW OR RIGHT" : "OUTSIDE") :
+                                                 (which >= SIDE_INSIDE ? "FROM ABOVE OR LEFT" : "INSIDE") })
+            {
+                for(; *part && length < 47; ++part)
+                {
+                    name[length++] = *part;
+                }
+            }
+
+            name[length] = 0;
+            ++shot;
+            bn::sram::write_span_offset(bn::span<const uint8_t>(reinterpret_cast<const uint8_t*>(name), length + 1),
+                                        16);
+            bn::sram::write_offset(uint8_t(shot), 0);
+            BN_LOG("KXGALLERY shot ", shot, " ", name, " door ", x, ",", y);
+        }
+    }
 }
 #endif

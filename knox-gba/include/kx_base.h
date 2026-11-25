@@ -91,6 +91,8 @@ namespace base_tuning
     constexpr int reinforce_level = 3;
     constexpr int window_health = 30;               // a window takes a few zombie hits
     constexpr int zombie_damage = 10;               // per zombie hit on a barricade or window
+    constexpr int failing_percent = 25;             // playtest 8: "BARRICADE FAILING" under this
+    constexpr int barricade_damage = 1;             // playtest 8: one zombie needs ~75 s for a plain barricade, ~3 min reinforced
     constexpr int zombie_hit_frames = 45;
     constexpr int bash_reach = 22;                  // px from the obstacle's centre a zombie hits it from
     constexpr int bang_noise = 6;                   // tiles: a zombie banging on boards

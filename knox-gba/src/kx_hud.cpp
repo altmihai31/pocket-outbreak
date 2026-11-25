@@ -38,12 +38,16 @@ namespace
     constexpr int prompt_max_top = 120;
 
     // Build mode (mockup 06).
-    constexpr int build_bar_top = 128;
-    constexpr int build_slots_left = 4;
-    constexpr int build_slot_step = 24;
-    constexpr int build_slots_top = 133;
-    constexpr int build_labels_top = 152;
-    constexpr int build_info_left = 126;
+    // Playtest 8: a framed panel inset like every other one, the pieces without labels (the title names the
+    // selected one), the materials on a row of their own so three fit, and a row of button hints.
+    constexpr int build_bar_height = 38;
+    constexpr int build_bar_top = canvas::height - margin - build_bar_height;
+    constexpr int build_slots_left = 12;
+    constexpr int build_slot_step = 20;
+    constexpr int build_slots_top = build_bar_top + 4;
+    constexpr int build_info_left = 119;
+    constexpr int build_materials_top = build_bar_top + 23;
+    constexpr int build_hints_top = build_bar_top + 31;
     constexpr int build_visible = 5;
 
     constexpr int slot_size = 14;
@@ -554,7 +558,7 @@ area hud::_layout(element value) const
     }
 
     case BUILD_BAR:
-        return _build ? area{ 0, build_bar_top, canvas::width, canvas::height - build_bar_top } : area();
+        return _build ? area{ margin, build_bar_top, canvas::width - (margin * 2), build_bar_height } : area();
 
     case CLOCK:
     {
@@ -793,10 +797,10 @@ void hud::_draw_build_safehouse()
 
 void hud::_draw_build_bar()
 {
-    // Mockup 06: the pieces with their labels on the left, then what the selected one needs.
+    // Mockup 06, framed (playtest 8): the pieces on the left, what the selected one is and whether it can go here
+    // beside them, then what it needs and the buttons.
     const area& region = _drawn[BUILD_BAR];
-    _canvas.rect(region.x, region.y, region.width, region.height, colour::fill);
-    _canvas.rect(region.x, region.y, region.width, 1, colour::border);
+    _canvas.panel(region.x, region.y, region.width, region.height, colour::fill, colour::border);
 
     // Five pieces show at a time; the bar scrolls to keep the selected one in view, with arrows at the ends.
     int first = bn::clamp(_build->selected - (build_visible / 2), 0, bn::max(piece_kinds - build_visible, 0));
@@ -805,11 +809,10 @@ void hud::_draw_build_bar()
     {
         int index = first + column;
         const piece_info& piece = info(piece_kind(index));
-        int x = build_slots_left + (column * build_slot_step);
-        bool selected = index == _build->selected;
-        slot(x, build_slots_top, piece.icon, selected);
-        _canvas.text_centered(x + 8, build_labels_top, piece.short_name, selected ? colour::accent : colour::quiet);
+        slot(build_slots_left + (column * build_slot_step), build_slots_top, piece.icon, index == _build->selected);
     }
+
+    int arrows_right = build_slots_left + ((build_visible - 1) * build_slot_step) + 16 + 2;
 
     for(int row = 0; row < 5; ++row)
     {
@@ -817,23 +820,24 @@ void hud::_draw_build_bar()
 
         if(first > 0)
         {
-            _canvas.rect(build_slots_left - 3 + (2 - reach), build_slots_top + 5 + row, reach + 1, 1, colour::quiet);
+            _canvas.rect(build_slots_left - 5 + (2 - reach), build_slots_top + 5 + row, reach + 1, 1, colour::quiet);
         }
 
         if(first + build_visible < piece_kinds)
         {
-            _canvas.rect(build_info_left - 9, build_slots_top + 5 + row, reach + 1, 1, colour::quiet);
+            _canvas.rect(arrows_right, build_slots_top + 5 + row, reach + 1, 1, colour::quiet);
         }
     }
 
-    _canvas.rect(build_info_left - 6, region.y + 4, 1, region.height - 8, colour::border);
+    _canvas.rect(build_info_left - 4, build_slots_top, 1, 16, colour::border);
     _canvas.text(build_info_left, build_slots_top + 2, _build->title, colour::accent);
 
+    // Status (beside the pieces) and materials (the row under them).
     for(int line = 0; line < 2; ++line)
     {
         const build_line& value = _build->lines[line];
-        int x = build_info_left;
-        int y = build_slots_top + 10 + (line * 8);
+        int x = line == 0 ? build_slots_left : build_info_left;
+        int y = line == 0 ? build_materials_top : build_slots_top + 10;
 
         for(int index = 0; index < value.count; ++index)
         {
@@ -845,6 +849,10 @@ void hud::_draw_build_bar()
             x = _canvas.text(x, y, value.text[index], value.colour[index]);
         }
     }
+
+    constexpr hint buttons[] = { { "HOLD A", "BUILD" }, { "B", "EXIT" }, { ui::button::l_r, "PIECE" },
+                                 { "D-PAD", "AIM" } };
+    hints(build_hints_top, buttons, 4, false);
 }
 
 void hud::_draw_clock()

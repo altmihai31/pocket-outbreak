@@ -55,7 +55,7 @@ namespace
     {
         bool side;
         return gfx == world_gfx::WALL_FACE || gfx == world_gfx::WALL_TOP || gfx == world_gfx::WINDOW_FACE ||
-               gfx == world_gfx::WINDOW_TOP || gfx == world_gfx::BARRICADE_FACE || gfx == world_gfx::BARRICADE_TOP ||
+               gfx == world_gfx::WINDOW_TOP || world::is_barricade(gfx) ||
                gfx == world_gfx::BROKEN_FACE || gfx == world_gfx::BROKEN_TOP ||
                world::door_of(gfx, side) != world::door_state::NONE;
     }
@@ -490,8 +490,11 @@ void build_mode::_finish(game& owner, const target& value)
 
         if(value.repair)
         {
+            // Playtest 8: only a plain barricade turned reinforced says so; a repair is a mend.
+            int full = 0;
+            static_cast<void>(base::barricade_health(x, y, full));
             base::repair_barricade(x, y, reinforced);
-            message = reinforced ? "BARRICADE REINFORCED" : "BARRICADE MENDED";
+            message = reinforced && full < reinforced_health ? "BARRICADE REINFORCED" : "BARRICADE MENDED";
         }
         else
         {
@@ -717,7 +720,8 @@ void build_mode::update(game& owner, const input_frame& input)
         _hold = 0;
     }
 
-    _update_cursor(owner, ! value.problem);
+    // Red when A would do nothing: a bad spot, or no tool or materials (playtest 8).
+    _update_cursor(owner, ready);
     _update_view(owner, value);
     owner.hud_ref().set_build(&_view);
 }
@@ -827,7 +831,8 @@ void build_mode::_update_view(game& owner, const target& value)
                                                                        "NO MATERIALS", colour::quiet);
     }
 
-    for(int index = 0; index < piece.material_count && ! value.repair; ++index)
+    // A mend uses the same materials as a build (playtest 8), so it lists them too.
+    for(int index = 0; index < piece.material_count && ! (value.repair && kind == piece_kind::CAMPFIRE); ++index)
     {
         const material& need = piece.materials[index];
         int have = material_count(items, need.item);
@@ -852,7 +857,28 @@ void build_mode::_update_view(game& owner, const target& value)
     }
     else
     {
-        if(piece.tool != item_id::NONE)
+        // Short of something: say what first (playtest 8), instead of a green "HAMMER OK".
+        const material* short_of = nullptr;
+
+        for(int index = 0; index < piece.material_count && ! short_of && kind != piece_kind::BED &&
+                           ! (value.repair && kind == piece_kind::CAMPFIRE); ++index)
+        {
+            if(material_count(items, piece.materials[index].item) < piece.materials[index].amount)
+            {
+                short_of = &piece.materials[index];
+            }
+        }
+
+        if(short_of)
+        {
+            item_id need = short_of->item;
+            segment(status, need == item_id::PLANKS ? "NEED PLANKS" : need == item_id::NAILS ? "NEED NAILS" :
+                            need == item_id::LOGS ? "NEED LOGS" : need == item_id::STONES ? "NEED STONES" :
+                            need == item_id::HINGE ? "NEED A HINGE" : need == item_id::DOORKNOB ? "NEED A KNOB" :
+                            need == item_id::ROPE ? "NEED ROPE" : need == item_id::GENERATOR ? "NEED A GENERATOR" :
+                            need == item_id::GARBAGE_BAG ? "NEED A BAG" : "NEED STICKS", colour::ui_red);
+        }
+        else if(piece.tool != item_id::NONE)
         {
             bool has = carried(items, piece.tool) > 0;
             bool shovel = piece.tool == item_id::SHOVEL;

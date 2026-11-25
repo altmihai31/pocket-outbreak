@@ -124,10 +124,14 @@ void set_ground_gfx(int tile_x, int tile_y, world_gfx gfx);
 // false if there is no room to remember it. The caller refreshes the renderer.
 bool set_wall_gfx(int tile_x, int tile_y, world_gfx gfx, bool restore = false);
 
-// Playtest 5: a side door's edge, drawn on the canopy of the tile outside it, follows the door's state. Called for
-// each chunk as it is generated and whenever a wall graphic changes; true if an edge changed (the caller refreshes
-// the tiles either side of the door).
+// Playtest 5: a side door's edge (playtest 7: a back door's too), drawn on the canopy of the tile outside it, follows
+// the door's state. Called for each chunk as it is generated and whenever a wall graphic changes; true if an edge
+// changed (the caller refreshes the tiles beside and above the door).
 bool update_door_edge(int tile_x, int tile_y);
+
+// Playtest 7: no door edges round this rectangle of tiles (the building the player is in; width 0: none), whose
+// roof is cut away. The caller refreshes the tiles round the old and the new rectangle.
+void hide_door_edges(int left, int top, int width, int height);
 
 [[nodiscard]] inline world_gfx wall_gfx(int tile_x, int tile_y)
 {
@@ -174,6 +178,31 @@ enum class door_state : uint8_t
            state == door_state::OPEN ? (side_wall ? world_gfx::DOOR_TOP_OPEN : world_gfx::DOOR_FACE_OPEN) :
            state == door_state::BROKEN ? (side_wall ? world_gfx::DOOR_TOP_BROKEN : world_gfx::DOOR_FACE_BROKEN) :
            world_gfx::EMPTY;
+}
+
+// Barricades (playtest 8): a front-wall and a side-wall look, each at full health, worn and failing.
+[[nodiscard]] constexpr bool is_barricade(world_gfx gfx)
+{
+    return gfx == world_gfx::BARRICADE_FACE || gfx == world_gfx::BARRICADE_TOP ||
+           gfx == world_gfx::BARRICADE_FACE_WORN || gfx == world_gfx::BARRICADE_FACE_FAILING ||
+           gfx == world_gfx::BARRICADE_TOP_WORN || gfx == world_gfx::BARRICADE_TOP_FAILING;
+}
+
+[[nodiscard]] constexpr bool barricade_in_side_wall(world_gfx gfx)
+{
+    return gfx == world_gfx::BARRICADE_TOP || gfx == world_gfx::BARRICADE_TOP_WORN ||
+           gfx == world_gfx::BARRICADE_TOP_FAILING;
+}
+
+// Worn under two thirds of its health, failing under one third.
+[[nodiscard]] constexpr world_gfx barricade_gfx(bool side_wall, int health, int full)
+{
+    bool failing = health * 3 < full;
+    bool worn = health * 3 < full * 2;
+    return side_wall ? (failing ? world_gfx::BARRICADE_TOP_FAILING : worn ? world_gfx::BARRICADE_TOP_WORN :
+                                                                       world_gfx::BARRICADE_TOP) :
+                       (failing ? world_gfx::BARRICADE_FACE_FAILING : worn ? world_gfx::BARRICADE_FACE_WORN :
+                                                                       world_gfx::BARRICADE_FACE);
 }
 
 // Houses and locks (milestone 12.7). A house id names a lot's building (its macro cell and lot): a house key keeps

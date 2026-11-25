@@ -92,6 +92,9 @@ public:
     // Redraws one world tile (after a decal) if it is inside the streamed window.
     void refresh_tile(int tile_x, int tile_y);
 
+    // Redraws the canopy layer over a rectangle of tiles (playtest 7: door edges round the building entered or left).
+    void refresh_rect(int tile_left, int tile_top, int tile_width, int tile_height);
+
     ~world_renderer();
 
     #if KX_BENCH

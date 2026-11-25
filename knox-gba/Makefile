@@ -139,6 +139,13 @@ ifeq ($(BENCH),14)
 	USERFLAGS	+=  -DKX_BENCH=14
 endif
 
+# BENCH=18: every kind of door in every state from both sides, for tools/door_gallery.py (playtest 7).
+ifeq ($(BENCH),18)
+	TARGET		:=  knox_gallery
+	BUILD		:=  build_gallery
+	USERFLAGS	+=  -DKX_BENCH=18
+endif
+
 ifeq ($(BENCH),12)
 	TARGET		:=  knox_doors
 	BUILD		:=  build_doors
