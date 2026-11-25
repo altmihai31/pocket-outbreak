@@ -21,6 +21,7 @@ import os
 import random
 import wave
 
+import speaker
 from common import AUDIO, write_if_changed
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -283,7 +284,7 @@ SOUNDS = [('zombie_moan', zombie_moan), ('zombie_breath', zombie_breath), ('zomb
 def build_zombie_sounds():
     """The five sounds into the game's audio folder (only rewritten when they change)."""
     for name, make in SOUNDS:
-        write_if_changed(os.path.join(AUDIO, name + '.wav'), wav_bytes(export(make())))
+        write_if_changed(os.path.join(AUDIO, name + '.wav'), speaker.finish(name, wav_bytes(export(make()))))
 
 
 def main():

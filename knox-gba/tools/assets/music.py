@@ -8,6 +8,11 @@ with the accompaniment kept below the melody:
   channel 3  wave (triangle; it sounds an octave below the pulses): the bass
   channel 4  noise: soft hats and a thud, only in the title and the chase
 
+Device check (2026-11-25): GBT Player's note names run an octave low (its C3 is 65 Hz) and the wave channel sounds an
+octave lower again, so the bass sat at 50-110 Hz and the chords at 100-200 Hz, quiet. A handheld's small speaker plays
+little under 400-500 Hz, and the music sounded muffled on the Miyoo Mini. The bass and the chords now sit an octave
+higher, with the chords at twice their volume (version B of the A/B/C sound test); the melodies are unchanged.
+
 GBT Player takes only its own instruments: samples 1-4 are the pulse duties, 8-15 the waves, 16-31 the noise kits, so
 the MOD's sample headers stay empty. Each song's speed is in frames per row (its .json turns off mod2gbt's 50 Hz to
 60 Hz speed conversion). Notes run from C3 to B8 in GBT Player's naming. The files are replaceable by hand-made ones
@@ -177,8 +182,8 @@ def title():
     """A minor, about 43 s, looping: chords and bass alone for 8 bars, then the melody over soft hats."""
     progression = ['Am', 'F', 'C', 'G', 'Am', 'F', 'Dm', 'E'] * 2
     song = Song('title', 10, len(progression))
-    bass(song, progression, 4, 75, 11, fifth_at=12)
-    arpeggio(song, progression, 4, 2, 1, 4)
+    bass(song, progression, 5, 75, 11, fifth_at=12)
+    arpeggio(song, progression, 5, 2, 1, 8)
     melody(song, [
         'E5 - - - D5 - C5 -',
         'A4 - - - - - . .',
@@ -200,8 +205,8 @@ def calm_day():
     """A minor, about 45 s, played once now and then: long notes, no drums."""
     progression = ['Am', 'Em', 'F', 'C', 'Dm', 'Am', 'Em', 'Am', 'F', 'C', 'Dm', 'E']
     song = Song('calm', 14, len(progression))
-    bass(song, progression, 4, 50, 14)
-    arpeggio(song, progression, 4, 4, 3, 3, order=(0, 2, 1, 2))
+    bass(song, progression, 5, 50, 14)
+    arpeggio(song, progression, 5, 4, 3, 6, order=(0, 2, 1, 2))
     melody(song, [
         'C5 - - -',
         'E5 - D5 C5',
@@ -223,8 +228,8 @@ def night():
     """D minor, about 58 s, played once now and then: low, slow and sparse over a drone."""
     progression = ['Dm', 'Dm', 'Bb', 'A', 'Gm', 'Dm', 'Bb', 'A', 'Dm', 'Gm', 'A', 'Dm']
     song = Song('night', 18, len(progression))
-    bass(song, progression, 4, 50, 15)
-    drone(song, progression, 3, 2, 15)
+    bass(song, progression, 5, 50, 15)
+    drone(song, progression, 4, 4, 15)
     melody(song, [
         '. . . .',
         'A4 - - -',
@@ -249,8 +254,8 @@ def chase():
     progression = ['Am', 'Am', 'F', 'E', 'Am', 'Am', 'Dm', 'E', 'F', 'F', 'E', 'E', 'Am', 'C', 'D', 'E',
                    'Am', 'Am', 'F', 'E']
     song = Song('chase', 6, len(progression))
-    bass(song, progression, 4, 100, 0, step=2, gate=1)
-    arpeggio(song, progression, 4, 2, 1, 5, sample=PULSE_12, order=(0, 2, 1, 2, 0, 2, 1, 0))
+    bass(song, progression, 5, 100, 0, step=2, gate=1)
+    arpeggio(song, progression, 5, 2, 1, 10, sample=PULSE_12, order=(0, 2, 1, 2, 0, 2, 1, 0))
     melody(song, [
         'E5 - - -', 'C5 - D5 E5', 'F5 - - -', 'E5 - D5 B4',
         'A4 - - -', 'C5 - E5 A5', 'F5 - - D5', 'G#5 - - -',
@@ -271,8 +276,8 @@ def death():
     """A minor, about 34 s, played once under the death screen: a slow falling line that ends on the tonic."""
     progression = ['Am', 'G', 'F', 'E', 'Dm', 'Am', 'E', 'Am']
     song = Song('death', 16, len(progression))
-    bass(song, progression, 4, 75, 15)
-    drone(song, progression, 4, 3, 15, tone=1, sample=PULSE_50)
+    bass(song, progression, 5, 75, 15)
+    drone(song, progression, 5, 6, 15, tone=1, sample=PULSE_50)
     melody(song, [
         'E5 - - -',
         'D5 - - -',
