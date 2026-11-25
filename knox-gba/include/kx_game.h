@@ -351,6 +351,7 @@ private:
     gear_screen _gear;
     health_screen _health;
     skills_screen _skills;
+    menu_repeat _menu_repeat;   // held directions in menu lists (playtest 5)
     menu_screen _menu_tab;   // the Start menu's MENU tab (the debug menu is _menu)
     map_screen _map;
     craft_screen _craft;

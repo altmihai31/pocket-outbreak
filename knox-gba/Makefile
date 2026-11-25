@@ -40,7 +40,9 @@ DMGAUDIO    	:=  dmg_audio
 DMGAUDIOBACKEND	:=  default
 ROMTITLE    	:=  POCKETOUTBRK
 ROMCODE     	:=  KNXE
-USERFLAGS   	:=  -DBN_CFG_SPRITES_MAX_SORT_LAYERS=32 -DBN_CFG_AUDIO_MAX_SOUND_CHANNELS=6
+# Sprite tile items 256 (Butano's default is 128; playtest 5: a busy screen ran out, and a sprite text redraw needs
+# the old and new tiles at once for a frame).
+USERFLAGS   	:=  -DBN_CFG_SPRITES_MAX_SORT_LAYERS=32 -DBN_CFG_SPRITE_TILES_MAX_ITEMS=256 -DBN_CFG_AUDIO_MAX_SOUND_CHANNELS=6
 USERCXXFLAGS	:=
 USERASFLAGS 	:=
 USERLDFLAGS 	:=
@@ -147,6 +149,13 @@ ifeq ($(BENCH),7)
 	TARGET		:=  knox_travel
 	BUILD		:=  build_travel
 	USERFLAGS	+=  -DKX_BENCH=7
+endif
+
+# BENCH=17: the save alone, cut off part-way at many points and loaded again (KXCUT lines).
+ifeq ($(BENCH),17)
+	TARGET		:=  knox_cut
+	BUILD		:=  build_cut
+	USERFLAGS	+=  -DKX_BENCH=17
 endif
 
 ifeq ($(BENCH),4)

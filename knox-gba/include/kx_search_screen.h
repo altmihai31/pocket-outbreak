@@ -60,6 +60,7 @@ private:
     void _draw_container_slot(game& owner, int slot);
     void _draw_info(game& owner);
     void _draw_reveals(game& owner);
+    void _draw_footer(game& owner);
 };
 
 }

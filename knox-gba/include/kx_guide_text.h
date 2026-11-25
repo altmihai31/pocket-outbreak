@@ -102,10 +102,12 @@ constexpr const char* lines[] = {
     "",
     "GRABBED? MASH A TO BREAK FREE.",
     "EVERY GRAB CAN SCRATCH, CUT OR",
-    "BITE.",
+    "BITE, AND ONE THAT HOLDS ON TOO",
+    "LONG ALWAYS BITES.",
     "",
-    "TWO AT ONCE IS A FIGHT. FIVE IS",
-    "A REASON TO RUN.",
+    "HELD BY TWO AT ONCE, TOO SLOW",
+    "IS DEATH. TWO AT ONCE IS A",
+    "FIGHT. FIVE IS A REASON TO RUN.",
     "HOLD R1 TO AIM: YOU WALK AT",
     "HALF SPEED, THE NEAREST ZOMBIE",
     "IN FRONT IS BRACKETED AND THE",
@@ -290,7 +292,7 @@ struct page
     uint8_t count;
 };
 
-constexpr page pages[] = { { 0, 10 }, { 10, 10 }, { 20, 13 }, { 33, 13 }, { 46, 13 }, { 59, 10 }, { 69, 12 }, { 81, 10 }, { 91, 11 }, { 102, 11 }, { 113, 13 }, { 126, 5 }, { 131, 12 }, { 143, 8 }, { 151, 11 }, { 162, 11 }, { 173, 10 }, { 183, 11 }, { 194, 10 }, { 204, 13 }, { 217, 12 }, { 229, 5 }, { 234, 9 }, { 243, 8 }, { 251, 11 }, { 262, 5 } };
+constexpr page pages[] = { { 0, 10 }, { 10, 10 }, { 20, 13 }, { 33, 13 }, { 46, 13 }, { 59, 10 }, { 69, 12 }, { 81, 12 }, { 93, 11 }, { 104, 11 }, { 115, 13 }, { 128, 5 }, { 133, 12 }, { 145, 8 }, { 153, 11 }, { 164, 11 }, { 175, 10 }, { 185, 11 }, { 196, 10 }, { 206, 13 }, { 219, 12 }, { 231, 5 }, { 236, 9 }, { 245, 8 }, { 253, 11 }, { 264, 5 } };
 
 // Topic t has pages topic_first_page[t] .. topic_first_page[t + 1] - 1.
 constexpr uint8_t topic_first_page[] = { 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26 };

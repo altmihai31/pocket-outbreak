@@ -208,6 +208,10 @@ enum class world_gfx : uint8_t
     ROAD_LINE_V_ITEMS,
     ROOF_RED_EAVE_DOOR,
     ROOF_GREY_EAVE_DOOR,
+    DOOR_EDGE_R_CLOSED,
+    DOOR_EDGE_R_OPEN,
+    DOOR_EDGE_L_CLOSED,
+    DOOR_EDGE_L_OPEN,
     COUNT
 };
 
@@ -234,7 +238,7 @@ constexpr uint8_t world_gfx_banks[] = {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 0, 0,
+    1, 1, 1, 1, 0, 0, 0, 0, 0, 0,
 };
 
 // Hardware flips per graphic: 0 none, 1 8x8 pieces sideways, 2 pieces both ways, 3 whole tile sideways (per
@@ -252,7 +256,7 @@ constexpr uint8_t world_gfx_flips[] = {
     0, 0, 4, 0, 0, 4, 0, 0, 4, 0, 0, 4, 0, 0, 4, 0,
     0, 4, 0, 0, 4, 0, 0, 4, 0, 0, 4, 0, 0, 4, 0, 0,
     4, 0, 0, 4, 0, 0, 4, 0, 0, 4, 0, 0, 4, 0, 0, 4,
-    0, 0, 4, 0, 1, 1,
+    0, 0, 4, 0, 1, 1, 0, 0, 0, 0,
 };
 
 // Which building colour a graphic takes: 0 none, 1 roof, 2 wall, 3 floor.
@@ -269,7 +273,7 @@ constexpr uint8_t world_gfx_paints[] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 1, 1,
+    0, 0, 0, 0, 1, 1, 0, 0, 0, 0,
 };
 
 // Palette bank per building colour variant (0: as drawn), per paint kind (roof, wall, floor).
@@ -294,7 +298,7 @@ constexpr uint8_t world_gfx_base[] = {
     6, 9, 9, 9, 10, 10, 10, 11, 11, 11, 14, 14, 14, 36, 36, 36,
     29, 29, 29, 30, 30, 30, 33, 33, 33, 34, 34, 34, 2, 2, 2, 3,
     3, 3, 4, 4, 4, 5, 5, 5, 37, 37, 37, 31, 31, 31, 7, 7,
-    7, 8, 8, 8, 196, 197,
+    7, 8, 8, 8, 196, 197, 198, 199, 200, 201,
 };
 
 // Decal version of each ground graphic, per world_decal; 0 where decals are not drawn (water, walls).
@@ -497,6 +501,10 @@ constexpr uint8_t world_gfx_decals[][int(world_decal::COUNT)] = {
     { 0, 0, 0, 0 },   // ROAD_LINE_V_ITEMS
     { 0, 0, 0, 0 },   // ROOF_RED_EAVE_DOOR
     { 0, 0, 0, 0 },   // ROOF_GREY_EAVE_DOOR
+    { 0, 0, 0, 0 },   // DOOR_EDGE_R_CLOSED
+    { 0, 0, 0, 0 },   // DOOR_EDGE_R_OPEN
+    { 0, 0, 0, 0 },   // DOOR_EDGE_L_CLOSED
+    { 0, 0, 0, 0 },   // DOOR_EDGE_L_OPEN
 };
 
 // Tree kinds (index 0 is no tree).

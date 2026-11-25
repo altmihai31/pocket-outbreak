@@ -6,6 +6,7 @@
 #include "kx_creation.h"
 #include "kx_game.h"
 #include "kx_sandbox.h"
+#include "kx_save.h"
 #include "kx_title.h"
 #include "kx_world.h"
 
@@ -16,6 +17,16 @@ int main()
     // The backdrop (shown wherever no layer draws, as while a world is being built or between screens) in the
     // menus' dark background colour (docs/palette.md), instead of the art's transparent magenta.
     bn::bg_palettes::set_transparent_color(bn::color(2, 2, 3));
+
+    #if KX_BENCH == 17
+        // Power-cut bench: the save alone, no game.
+        kx::save::power_cut_bench();
+
+        while(true)
+        {
+            bn::core::update();
+        }
+    #endif
 
     // The title starts a new world or continues the saved one; quitting comes back here. Tuning edits persist.
     // Bench builds play the hand-made test map so their scripted routes and numbers stay comparable; the travel and

@@ -27,7 +27,21 @@ struct input_frame
     bool start_pressed = false;
     bool r_pressed = false;
     bool r_held = false;
+    bool repeated = false;          // a direction press made by menu_repeat (a held direction), not a new press
 };
+
+// Up/Down in a list of `count` rows: a press wraps round at the ends, a held direction stops there (playtest 5).
+[[nodiscard]] inline int step_list(int value, int count, const input_frame& input)
+{
+    int next = value + (input.down_pressed ? 1 : -1);
+
+    if(next < 0 || next >= count)
+    {
+        return input.repeated ? value : (next + count) % count;
+    }
+
+    return next;
+}
 
 // Reads the keypad, or in bench builds (make BENCH=1) plays a scripted route for repeatable profiling.
 class input_source
@@ -57,6 +71,29 @@ private:
     int _previous_dy = 0;
     bool _finished = false;
     bool _primed = false;       // the first read takes what is already held as the previous state
+};
+
+// Held directions in menu lists (playtest 5): a press steps once; held, it steps again after a delay and then at a
+// steady rate, as extra presses. Menus and searches only: in the world a press is a step of the double-tap jog.
+namespace menu_repeat_tuning
+{
+    constexpr int delay_frames = 18;
+    constexpr int interval_frames = 5;
+}
+
+class menu_repeat
+{
+
+public:
+    void apply(input_frame& input);
+
+    void reset()
+    {
+        _held[0] = _held[1] = _held[2] = _held[3] = 0;
+    }
+
+private:
+    int _held[4] = {};      // frames each direction has been held: up, down, left, right
 };
 
 }

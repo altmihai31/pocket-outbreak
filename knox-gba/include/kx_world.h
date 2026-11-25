@@ -124,6 +124,11 @@ void set_ground_gfx(int tile_x, int tile_y, world_gfx gfx);
 // false if there is no room to remember it. The caller refreshes the renderer.
 bool set_wall_gfx(int tile_x, int tile_y, world_gfx gfx, bool restore = false);
 
+// Playtest 5: a side door's edge, drawn on the canopy of the tile outside it, follows the door's state. Called for
+// each chunk as it is generated and whenever a wall graphic changes; true if an edge changed (the caller refreshes
+// the tiles either side of the door).
+bool update_door_edge(int tile_x, int tile_y);
+
 [[nodiscard]] inline world_gfx wall_gfx(int tile_x, int tile_y)
 {
     return gfx_at(layer::WALLS, tile_x, tile_y);
