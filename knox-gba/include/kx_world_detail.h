@@ -95,6 +95,10 @@ struct gfx_flag_table
 
     case world_gfx::BARRICADE_FACE:
     case world_gfx::BARRICADE_TOP:
+    case world_gfx::BARRICADE_FACE_WORN:
+    case world_gfx::BARRICADE_FACE_FAILING:
+    case world_gfx::BARRICADE_TOP_WORN:
+    case world_gfx::BARRICADE_TOP_FAILING:
         return solid_flag | opaque_flag | breakable_flag;
 
     case world_gfx::BROKEN_FACE:

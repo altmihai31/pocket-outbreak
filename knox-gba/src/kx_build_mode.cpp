@@ -55,7 +55,7 @@ namespace
     {
         bool side;
         return gfx == world_gfx::WALL_FACE || gfx == world_gfx::WALL_TOP || gfx == world_gfx::WINDOW_FACE ||
-               gfx == world_gfx::WINDOW_TOP || gfx == world_gfx::BARRICADE_FACE || gfx == world_gfx::BARRICADE_TOP ||
+               gfx == world_gfx::WINDOW_TOP || world::is_barricade(gfx) ||
                gfx == world_gfx::BROKEN_FACE || gfx == world_gfx::BROKEN_TOP ||
                world::door_of(gfx, side) != world::door_state::NONE;
     }

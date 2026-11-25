@@ -874,7 +874,7 @@ namespace
         auto door = [](world_gfx wall)
         {
             return (wall >= world_gfx::DOOR_FACE_CLOSED && wall <= world_gfx::DOOR_TOP_BROKEN) ||
-                   wall == world_gfx::BARRICADE_FACE || wall == world_gfx::BARRICADE_TOP;
+                   is_barricade(wall);
         };
 
         const uint8_t* walls = slot.gfx[int(layer::WALLS)];
@@ -921,8 +921,8 @@ bool update_door_edge(int tile_x, int tile_y)
     bool side_wall;
     world_gfx wall = gfx_at(layer::WALLS, tile_x, tile_y);
     door_state state = door_of(wall, side_wall);
-    bool boarded = wall == world_gfx::BARRICADE_FACE || wall == world_gfx::BARRICADE_TOP;
-    side_wall = boarded ? wall == world_gfx::BARRICADE_TOP : side_wall;
+    bool boarded = is_barricade(wall);
+    side_wall = boarded ? barricade_in_side_wall(wall) : side_wall;
     bool hidden = edges_hidden(tile_x, tile_y);
     bool changed = false;
 

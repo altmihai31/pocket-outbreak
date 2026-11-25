@@ -217,6 +217,10 @@ enum class world_gfx : uint8_t
     DOOR_EDGE_R_BOARDED,
     DOOR_EDGE_L_BOARDED,
     DOOR_EDGE_T_BOARDED,
+    BARRICADE_FACE_WORN,
+    BARRICADE_FACE_FAILING,
+    BARRICADE_TOP_WORN,
+    BARRICADE_TOP_FAILING,
     COUNT
 };
 
@@ -243,7 +247,8 @@ constexpr uint8_t world_gfx_banks[] = {
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-    1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0,
 };
 
 // Hardware flips per graphic: 0 none, 1 8x8 pieces sideways, 2 pieces both ways, 3 whole tile sideways (per
@@ -261,7 +266,8 @@ constexpr uint8_t world_gfx_flips[] = {
     0, 0, 4, 0, 0, 4, 0, 0, 4, 0, 0, 4, 0, 0, 4, 0,
     0, 4, 0, 0, 4, 0, 0, 4, 0, 0, 4, 0, 0, 4, 0, 0,
     4, 0, 0, 4, 0, 0, 4, 0, 0, 4, 0, 0, 4, 0, 0, 4,
-    0, 0, 4, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 4, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0,
 };
 
 // Which building colour a graphic takes: 0 none, 1 roof, 2 wall, 3 floor.
@@ -278,7 +284,8 @@ constexpr uint8_t world_gfx_paints[] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2,
+    2, 2, 2,
 };
 
 // Palette bank per building colour variant (0: as drawn), per paint kind (roof, wall, floor).
@@ -303,7 +310,8 @@ constexpr uint8_t world_gfx_base[] = {
     6, 9, 9, 9, 10, 10, 10, 11, 11, 11, 14, 14, 14, 36, 36, 36,
     29, 29, 29, 30, 30, 30, 33, 33, 33, 34, 34, 34, 2, 2, 2, 3,
     3, 3, 4, 4, 4, 5, 5, 5, 37, 37, 37, 31, 31, 31, 7, 7,
-    7, 8, 8, 8, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206,
+    7, 8, 8, 8, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207,
+    208, 209, 210,
 };
 
 // Decal version of each ground graphic, per world_decal; 0 where decals are not drawn (water, walls).
@@ -515,6 +523,10 @@ constexpr uint8_t world_gfx_decals[][int(world_decal::COUNT)] = {
     { 0, 0, 0, 0 },   // DOOR_EDGE_R_BOARDED
     { 0, 0, 0, 0 },   // DOOR_EDGE_L_BOARDED
     { 0, 0, 0, 0 },   // DOOR_EDGE_T_BOARDED
+    { 0, 0, 0, 0 },   // BARRICADE_FACE_WORN
+    { 0, 0, 0, 0 },   // BARRICADE_FACE_FAILING
+    { 0, 0, 0, 0 },   // BARRICADE_TOP_WORN
+    { 0, 0, 0, 0 },   // BARRICADE_TOP_FAILING
 };
 
 // Tree kinds (index 0 is no tree).

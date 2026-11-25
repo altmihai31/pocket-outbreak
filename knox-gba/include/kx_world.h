@@ -180,6 +180,31 @@ enum class door_state : uint8_t
            world_gfx::EMPTY;
 }
 
+// Barricades (playtest 8): a front-wall and a side-wall look, each at full health, worn and failing.
+[[nodiscard]] constexpr bool is_barricade(world_gfx gfx)
+{
+    return gfx == world_gfx::BARRICADE_FACE || gfx == world_gfx::BARRICADE_TOP ||
+           gfx == world_gfx::BARRICADE_FACE_WORN || gfx == world_gfx::BARRICADE_FACE_FAILING ||
+           gfx == world_gfx::BARRICADE_TOP_WORN || gfx == world_gfx::BARRICADE_TOP_FAILING;
+}
+
+[[nodiscard]] constexpr bool barricade_in_side_wall(world_gfx gfx)
+{
+    return gfx == world_gfx::BARRICADE_TOP || gfx == world_gfx::BARRICADE_TOP_WORN ||
+           gfx == world_gfx::BARRICADE_TOP_FAILING;
+}
+
+// Worn under two thirds of its health, failing under one third.
+[[nodiscard]] constexpr world_gfx barricade_gfx(bool side_wall, int health, int full)
+{
+    bool failing = health * 3 < full;
+    bool worn = health * 3 < full * 2;
+    return side_wall ? (failing ? world_gfx::BARRICADE_TOP_FAILING : worn ? world_gfx::BARRICADE_TOP_WORN :
+                                                                       world_gfx::BARRICADE_TOP) :
+                       (failing ? world_gfx::BARRICADE_FACE_FAILING : worn ? world_gfx::BARRICADE_FACE_WORN :
+                                                                       world_gfx::BARRICADE_FACE);
+}
+
 // Houses and locks (milestone 12.7). A house id names a lot's building (its macro cell and lot): a house key keeps
 // the id of the house it opens in its extra field; 0 is none.
 namespace lock_tuning

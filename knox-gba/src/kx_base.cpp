@@ -334,6 +334,15 @@ void repair_barricade(int tile_x, int tile_y, bool reinforced)
         }
 
         item->value = uint8_t(item->reinforced() ? reinforced_health : base_tuning::barricade_health);
+
+        // Mended: the boards look whole again (playtest 8).
+        world_gfx wall = world::wall_gfx(tile_x, tile_y);
+
+        if(item->kind() == piece_kind::BARRICADE && world::is_barricade(wall))
+        {
+            static_cast<void>(world::set_wall_gfx(tile_x, tile_y,
+                                                  world::barricade_gfx(world::barricade_in_side_wall(wall), 1, 1)));
+        }
     }
 }
 
@@ -348,7 +357,29 @@ bool damage_barricade(game& owner, int tile_x, int tile_y, int amount)
 
     if(item->value > amount)
     {
+        int before = item->value;
         item->value = uint8_t(item->value - amount);
+
+        // Playtest 8: a barricade shows its wear, and says when it is about to give.
+        if(item->kind() == piece_kind::BARRICADE)
+        {
+            int full = item->reinforced() ? reinforced_health : base_tuning::barricade_health;
+            world_gfx wall = world::wall_gfx(tile_x, tile_y);
+            world_gfx look = world::barricade_gfx(world::barricade_in_side_wall(wall), item->value, full);
+
+            if(look != wall && world::is_barricade(wall))
+            {
+                static_cast<void>(world::set_wall_gfx(tile_x, tile_y, look));
+                owner.refresh_tile(tile_x, tile_y);
+            }
+
+            if(before * 100 >= full * base_tuning::failing_percent &&
+               item->value * 100 < full * base_tuning::failing_percent)
+            {
+                owner.toast("BARRICADE FAILING", hud_tiles::bank_danger, 120);
+            }
+        }
+
         return false;
     }
 

@@ -399,6 +399,64 @@ def gfx_barricade_top():
     return boards(g, True)
 
 
+def barricade_damage(g, opening, stage, put):
+    """Playtest 8: a barricade wearing down, drawn on two planks along u (0-15) at v rows 3-5 and 9-11 (dark under
+    at 6 and 12). Stage 1 (worn): the first plank split near the middle, its far half sagging 1 px, a nail of the
+    second gone. Stage 2 (failing): the first plank gone but a stub hanging from its nail, the second split and
+    sagging. put(u, v, value) writes in tile space; opening(u, v) is what shows where a plank is gone."""
+    if stage >= 1:
+        for u in range(9, 15):
+            put(u, 3, opening(u, 3))
+            for v in (4, 5, 6):
+                put(u, v, W_WOOD)
+            put(u, 7, W_DARK)
+        for u, v in ((8, 3), (8, 4), (9, 5), (9, 6)):
+            put(u, v, W_DARK)
+        put(12, 10, W_WOOD)
+    if stage >= 2:
+        for u in range(1, 15):
+            for v in range(3, 8):
+                put(u, v, opening(u, v))
+        for u, v in ((1, 3), (2, 3), (3, 3), (1, 4), (2, 4), (3, 4), (4, 4), (2, 5), (3, 5), (4, 5), (5, 5),
+                     (3, 6), (4, 6), (5, 6)):
+            put(u, v, W_WOOD)
+        for u, v in ((3, 4), (1, 5), (2, 6), (4, 7), (5, 7), (6, 6)):
+            put(u, v, W_DARK)
+        for u in range(9, 15):
+            put(u, 9, opening(u, 9))
+            for v in (10, 11, 12):
+                put(u, v, W_WOOD)
+            put(u, 13, W_DARK)
+        for u, v in ((8, 9), (8, 10), (9, 11), (9, 12)):
+            put(u, v, W_DARK)
+    return g
+
+
+def gfx_barricade_face_damaged(stage):
+    g = gfx_barricade_face()
+    base = gfx_window_face()
+    for y in range(3, 12):
+        for x in range(3, 13):
+            base[y][x] = W_DARK
+
+    def put(u, v, value):
+        g[v][u] = value
+    return barricade_damage(g, lambda u, v: base[v][u], stage, put)
+
+
+def gfx_barricade_top_damaged(stage):
+    """The same in a side wall: the planks run down columns 4-6 and 9-11."""
+    g = gfx_barricade_top()
+    base = gfx_window_top()
+    for y in range(3, 13):
+        base[y][7] = base[y][8] = W_DARK
+
+    def put(u, v, value):
+        if v + 1 < 16:
+            g[u][v + 1] = value
+    return barricade_damage(g, lambda u, v: base[u][v + 1] if v + 1 < 16 else W_DARK, stage, put)
+
+
 def gfx_broken_face():
     """A smashed window: an empty frame with glass shards in the corners (zombies climb through)."""
     g = gfx_window_face()
@@ -1367,6 +1425,10 @@ WORLD_GFX_LATE += [('DOOR_EDGE_%s_%s' % (side, state), gfx_door_edge(side == 'R'
 # Playtest 7: back doors' edges past the roof line, the same way (after the side doors', so saved ids stay put).
 WORLD_GFX_LATE += [('DOOR_EDGE_T_%s' % state, gfx_door_edge_top(state == 'OPEN')) for state in ('CLOSED', 'OPEN')]
 WORLD_GFX_LATE += [('DOOR_EDGE_%s_BOARDED' % where, gfx_door_edge_boarded(where)) for where in ('R', 'L', 'T')]
+# Playtest 8: barricades show their wear (worn under 67%, failing under 34%).
+WORLD_GFX_LATE += [('BARRICADE_%s_%s' % (where, stage_name),
+                    (gfx_barricade_face_damaged if where == 'FACE' else gfx_barricade_top_damaged)(stage))
+                   for where in ('FACE', 'TOP') for stage, stage_name in ((1, 'WORN'), (2, 'FAILING'))]
 
 # Walls graphics drawn with the decal bank's colours (bank 1): a dead survivor lying where they fell.
 WORLD_GFX_DECAL_BANK = [('BODY', None)]
@@ -1518,6 +1580,7 @@ FLOOR_VARIANTS = [  # light pine (white tiles), dark walnut (blue tiles), red ca
 PAINT_KINDS = ['ROOF', 'WALL', 'FLOOR']
 PAINTED = {
     'WALL': ['WALL_FACE', 'WALL_TOP', 'WINDOW_FACE', 'WINDOW_TOP', 'BARRICADE_FACE', 'BARRICADE_TOP',
+             'BARRICADE_FACE_WORN', 'BARRICADE_FACE_FAILING', 'BARRICADE_TOP_WORN', 'BARRICADE_TOP_FAILING',
              'BROKEN_FACE', 'BROKEN_TOP', 'DOOR_FACE_CLOSED', 'DOOR_FACE_OPEN', 'DOOR_FACE_BROKEN'],
     'FLOOR': ['WOOD_FLOOR', 'TILE_FLOOR'],
 }
