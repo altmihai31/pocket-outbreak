@@ -13,6 +13,7 @@ import math
 import os
 import random
 
+import speaker  # noqa: E402
 from common import AUDIO, write_if_changed  # noqa: E402
 from zombie_sounds import (RATE, biquad, brown, count, db, distortion, export, fades, glide, mix, pink, reverb,  # noqa
                            soft_clip, unit, wav_bytes, white)
@@ -287,4 +288,4 @@ SOUNDS = [('boar_grunt', boar_grunt_a), ('wolf_howl', wolf_howl_a), ('wolf_snarl
 def build_animal_sounds():
     """The six sounds into the game's audio folder (only rewritten when they change)."""
     for name, make in SOUNDS:
-        write_if_changed(os.path.join(AUDIO, name + '.wav'), wav_bytes(export(make())))
+        write_if_changed(os.path.join(AUDIO, name + '.wav'), speaker.finish(name, wav_bytes(export(make()))))

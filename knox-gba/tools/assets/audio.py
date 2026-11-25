@@ -6,6 +6,7 @@ import random
 import struct
 import wave
 
+import speaker
 from common import AUDIO, write_if_changed
 from zombie_sounds import build_zombie_sounds
 from animal_sounds import build_animal_sounds
@@ -108,7 +109,7 @@ def save_wav(name, samples):
         w.setsampwidth(1)
         w.setframerate(RATE)
         w.writeframes(bytes(max(0, min(255, int(128 + s * 127))) for s in samples))
-    write_if_changed(os.path.join(AUDIO, name + '.wav'), buf.getvalue())
+    write_if_changed(os.path.join(AUDIO, name + '.wav'), speaker.finish(name, buf.getvalue()))
 
 
 # Voices (playtest 1): a throat source shaped by formant resonators, the peaks that make a vowel. The first groan was
