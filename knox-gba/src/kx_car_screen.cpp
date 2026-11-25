@@ -36,7 +36,7 @@ namespace
     constexpr int part_count = int(car_part::COUNT);
     constexpr int action_count = int(car_action::COUNT);
     constexpr int row_count = part_count + action_count;
-    constexpr int actions_title_y = rows_top + (part_count * row_step) + 7;
+    constexpr int actions_title_y = rows_top + (part_count * row_step) + 9;     // playtest 6: 2 px more room
     constexpr int actions_top = actions_title_y + 8;
     constexpr int tracked_warning = vehicle_tuning::max_tracked - vehicle_tuning::reserved_slots;
 
@@ -167,7 +167,7 @@ namespace
 
         if(counted)
         {
-            ui::append(text, ui::append_int(text, 0, have), "/1");
+            ui::append(text, ui::append_int(text, 0, have), " / 1");
         }
         else
         {
@@ -328,7 +328,7 @@ void car_screen::_draw_left(game& owner)
     pixels.panel(list_left, panels_top, list_width, panels_height, colour::fill, colour::border);
     pixels.text(list_left + 5, panels_top + 4, "PARTS", colour::quiet);
     length = ui::append_int(text, 0, ready);
-    ui::append(text, length, "/5");
+    ui::append(text, length, " / 5");
     pixels.text_right(list_left + list_width - 5, panels_top + 4, text,
                       ready == part_count ? colour::ui_green : colour::ui_orange);
     pixels.rect(list_left + 4, panels_top + 11, list_width - 8, 1, colour::border);
@@ -432,12 +432,43 @@ void car_screen::_draw_right(game& owner)
         pixels.text(detail_x, panels_top + 5, part_titles[_row], colour::accent);
         pixels.text(detail_x, panels_top + 15, text[0] ? text : "FITTED", ok ? colour::ui_green : colour::ui_red);
         pixels.rect(detail_x - 1, y + 1, detail_right - detail_x + 2, 1, colour::border);
+        bool fitted = vehicles.part_full(_vehicle, part);
+
+        // A wreck only gives parts (playtest 6: its panel listed what fitting and repairs would take, and "A WRECK
+        // CAN'T BE FIXED" under them): what taking this one out takes, or that there is nothing to take.
+        if(vehicles.kind(_vehicle) == vehicle_kind::WRECK)
+        {
+            bool removable = part == car_part::BATTERY || part == car_part::SPARK_PLUG || part == car_part::TYRES;
+
+            bool some = vehicles.part_some(_vehicle, part);
+
+            if(removable && some)
+            {
+                pixels.text(detail_x, y + 5, "TO TAKE IT OUT", colour::quiet);
+                y = need_item(owner, pixels, y + 13, "WRENCH", item_id::WRENCH, false);
+                pixels.rect(detail_x - 1, y + 1, detail_right - detail_x + 2, 1, colour::border);
+                y = takes_line(owner, pixels, y + 5, vehicles.part_work_minutes(owner, part));
+                pixels.text(detail_x, y, "TRAINS MECHANICS", colour::quiet);
+
+                if(! can_remove && problem)
+                {
+                    wrap(pixels, y + 14, problem, colour::ui_red);
+                }
+            }
+            else
+            {
+                wrap(pixels, y + 5, part == car_part::FUEL && some ? "SIPHON FUEL IS UNDER ACTIONS" :
+                                    removable ? "NOTHING TO TAKE" : "NOTHING TO TAKE FROM A WRECK", colour::quiet);
+            }
+
+            fit_label = nullptr;
+        }
+        else
+        {
         pixels.text(detail_x, y + 5, "NEEDS", colour::quiet);
         y += 13;
 
         // What fitting it takes while it is missing, else what taking it out does.
-        bool fitted = vehicles.part_full(_vehicle, part);
-
         switch(part)
         {
 
@@ -488,6 +519,7 @@ void car_screen::_draw_right(game& owner)
         if(! can_fit)
         {
             fit_label = nullptr;
+        }
         }
     }
     else
@@ -584,7 +616,7 @@ void car_screen::_draw_right(game& owner)
 
     // Footer: what the buttons do on this line; the tracked count when it is nearly full (spec: caps show).
     pixels.rect(0, footer_top, canvas::width, canvas::height - footer_top, canvas::backdrop);
-    hud::hint hints[3];
+    hud::hint hints[4];
     int count = 0;
 
     if(fit_label)
@@ -598,13 +630,20 @@ void car_screen::_draw_right(game& owner)
     }
 
     hints[count++] = { "B", "CLOSE" };
+    bool tracked_full = vehicles.tracked_count() >= tracked_warning;
+
+    if(! tracked_full)
+    {
+        hints[count++] = { "D-PAD", "CHOOSE" };
+    }
+
     screen.hints(footer_y, hints, count, false);
 
-    if(vehicles.tracked_count() >= tracked_warning)
+    if(tracked_full)
     {
         length = ui::append(text, 0, "TRACKED ");
         length = ui::append_int(text, length, vehicles.tracked_count());
-        length = ui::append(text, length, "/");
+        length = ui::append(text, length, " / ");
         ui::append_int(text, length, vehicle_tuning::max_tracked);
         pixels.text_right(canvas::width - 12, footer_y, text, colour::ui_orange);
     }

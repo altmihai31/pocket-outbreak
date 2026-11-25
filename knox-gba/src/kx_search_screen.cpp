@@ -16,29 +16,29 @@ namespace kx
 namespace
 {
     // Layout in pixels (mockup 03): a header strip, the container and carried panels side by side, each fitting
-    // its grid of 16 px slots (2 px apart) with 7 px of padding, then the info box. Titles sit in the cell row
+    // its grid of 16 px slots (2 px apart) with 4 px of padding, then the info box. Titles sit in the cell row
     // above the slots, so the danger colour's palette bank never reaches an icon.
     constexpr int container_columns = 4;
     constexpr int carried_columns = 6;
     constexpr int container_rows = container::capacity / container_columns;
     constexpr int carried_rows = inventory::slots / carried_columns;
     constexpr int slot_step = 18;
-    constexpr int padding = 7;
-    constexpr int panel_gap = 8;
+    constexpr int padding = 4;                  // playtest 6: the Gear tab's frame (it was 7, and 8 between panels)
+    constexpr int panel_gap = 4;
     constexpr int screen_left = 12;
     constexpr int screen_width = canvas::width - (screen_left * 2);
     constexpr int header_top = 4;
     constexpr int header_height = 14;
     constexpr int header_text_y = header_top + 5;
-    constexpr int header_text_x = screen_left + 6;
+    constexpr int header_text_x = screen_left + 5;
     constexpr int header_right = screen_left + screen_width - 7;  // right edge of the time
-    constexpr int panels_top = 21;
+    constexpr int panels_top = 22;
     constexpr int title_y = panels_top + 5;
 
     // A take blocked by weight blinks the carried weight red: 4 blinks of this many frames (milestone 13).
     constexpr int bag_flash_blink = 6;
     constexpr int slots_top = panels_top + 12;
-    constexpr int info_top = 115;
+    constexpr int info_top = 116;
     constexpr int info_height = 26;
     constexpr int info_text_x = screen_left + 6;
     constexpr int info_right = screen_left + screen_width - 7;
@@ -52,21 +52,22 @@ namespace
         return (columns * slot_step) + (padding * 2);
     }
 
-    [[nodiscard]] constexpr int panel_height(int rows)
-    {
-        return (slots_top - panels_top) + (rows * slot_step) - 2 + padding + 1;
-    }
 
+    // The two panels fill the frame and are as tall as each other (playtest 6); the container's slots sit centred.
     constexpr int container_left = screen_left;
-    constexpr int carried_left = container_left + panel_width(container_columns) + panel_gap;
-    static_assert(carried_left + panel_width(carried_columns) == screen_left + screen_width);
-    static_assert(panels_top + panel_height(carried_rows) < info_top);
+    constexpr int container_width = screen_width - panel_width(carried_columns) - panel_gap;
+    constexpr int container_shift = (container_width - panel_width(container_columns)) / 2;
+    constexpr int carried_left = container_left + container_width + panel_gap;
+    constexpr int panels_height = (slots_top - panels_top) + (carried_rows * slot_step) - 2 + padding + 1;
+    static_assert(container_rows <= carried_rows);
+    static_assert(panels_top + panels_height < info_top);
 
     // Top-left pixel of a slot.
     [[nodiscard]] int slot_x(int panel, int index)
     {
         int columns = panel == 0 ? container_columns : carried_columns;
-        return (panel == 0 ? container_left : carried_left) + 1 + padding + ((index % columns) * slot_step);
+        return (panel == 0 ? container_left + container_shift : carried_left) + 1 + padding +
+               ((index % columns) * slot_step);
     }
 
     [[nodiscard]] int slot_y(int panel, int index)
@@ -574,8 +575,7 @@ void search_screen::_draw_left(game& owner)
     _draw_header(owner);
 
     // Container panel.
-    pixels.panel(container_left, panels_top, panel_width(container_columns), panel_height(container_rows),
-                 colour::fill, colour::border);
+    pixels.panel(container_left, panels_top, container_width, panels_height, colour::fill, colour::border);
     pixels.text(container_left + 1 + padding, title_y, table.short_name, colour::quiet);
 
     for(int slot = 0; slot < container::capacity; ++slot)
@@ -612,7 +612,7 @@ void search_screen::_draw_right(game& owner)
 
     // Carried panel with the weight against capacity (danger colour when over).
     int carried_width = panel_width(carried_columns);
-    pixels.panel(carried_left, panels_top, carried_width, panel_height(carried_rows), colour::fill, colour::border);
+    pixels.panel(carried_left, panels_top, carried_width, panels_height, colour::fill, colour::border);
     pixels.text(carried_left + 1 + padding, title_y, "CARRIED", colour::quiet);
     _draw_weight(owner);
 

@@ -31,7 +31,8 @@ namespace
     constexpr int visible_pairs = 8;            // more scroll (arrows show there are more)
     constexpr int column_left[2] = { 17, 123 };
     constexpr int column_right[2] = { 116, 223 };
-    constexpr int info_top = 124;
+    constexpr int info_top = 123;               // playtest 6: the box ends on the standard frame's line (141)
+    constexpr int info_height = 19;
     constexpr int footer_y = 147;
 
     // The focus: the occupation row, or a trait (column 0 good, 1 bad; row = pair).
@@ -112,7 +113,14 @@ namespace
         output[length] = 0;
     }
 
-    void draw(canvas& pixels, const character_choice& choice, const cursor& focus)
+    // What Start asks about before it begins (playtest 6): points left unspent, the saved world it replaces.
+    struct begin_check
+    {
+        bool replaces = false;      // a new world, with a saved one it replaces
+        bool asking = false;        // Start was pressed once; again begins
+    };
+
+    void draw(canvas& pixels, const character_choice& choice, const cursor& focus, const begin_check& check)
     {
         char text[48];
         int length;
@@ -123,8 +131,9 @@ namespace
         pixels.panel(left, header_top, width, 14, colour::fill, colour::border);
         pixels.text(text_x, header_top + 5, "NEW SURVIVOR", colour::accent);
         ui::append_int(text, 0, left_points);
-        pixels.text_right(right + 1, header_top + 5, text, left_points >= 0 ? colour::ui_green : colour::ui_red);
-        pixels.text_right(right + 1 - canvas::text_width(text) - 4, header_top + 5, "POINTS", colour::quiet);
+        // 4 px inside the border at both ends (playtest 6: 2 px on the right).
+        pixels.text_right(right - 1, header_top + 5, text, left_points >= 0 ? colour::ui_green : colour::ui_red);
+        pixels.text_right(right - 1 - canvas::text_width(text) - 4, header_top + 5, "POINTS", colour::quiet);
 
         // Occupation, centred over what it starts with.
         pixels.panel(left, job_top, width, 24, colour::fill, colour::border);
@@ -141,21 +150,8 @@ namespace
         pixels.text(column_left[1] - 1, traits_top + 4, "BAD TRAITS", colour::quiet);
         pixels.rect(center_x - 1, traits_top + 4, 1, traits_height - 8, colour::border);
 
-        // Small arrows on the panel's top and bottom edges, over the divider, when more pairs are above or below.
-        if(focus.scroll > 0)
-        {
-            pixels.rect(center_x - 1, traits_top, 1, 1, colour::text);
-            pixels.rect(center_x - 2, traits_top + 1, 3, 1, colour::text);
-            pixels.rect(center_x - 3, traits_top + 2, 5, 1, colour::text);
-        }
-
-        if(focus.scroll + visible_pairs < pairs)
-        {
-            int bottom = traits_top + traits_height - 1;
-            pixels.rect(center_x - 3, bottom - 2, 5, 1, colour::text);
-            pixels.rect(center_x - 2, bottom - 1, 3, 1, colour::text);
-            pixels.rect(center_x - 1, bottom, 1, 1, colour::text);
-        }
+        // Scroll marks on the heading line (playtest 6: they sat on the panel's edges and a trait's cost).
+        pixels.scroll_marks(column_right[1], traits_top + 4, focus.scroll > 0, focus.scroll + visible_pairs < pairs);
 
         for(int index = 0; index < trait_count; ++index)
         {
@@ -178,7 +174,8 @@ namespace
                 pixels.rect(x - 2, y - 1, column_right[column] - x + 4, row_step, colour::accent);
             }
 
-            pixels.rect(x, y, 5, 5, chosen ? (focused ? colour::fill : colour::accent) : colour::empty);
+            // Playtest 6: an outline when not taken, a tick when taken, so a taken trait shows under the cursor too.
+            pixels.tick_box(x - 1, y, chosen, focused ? colour::fill : chosen ? colour::ui_green : colour::border);
             pixels.text(x + 8, y, info(value).name, focused ? colour::fill : chosen ? colour::text : colour::quiet);
             length = ui::append(text, 0, column == 0 ? "-" : "+");
             ui::append_int(text, length, info(value).points);
@@ -189,9 +186,29 @@ namespace
         // What the focused choice does; while the points are negative (too many good traits, or an occupation
         // with fewer points), what to give back instead.
         bool over_spent = left_points < 0;
-        pixels.panel(left, info_top, width, 19, colour::fill, over_spent ? colour::ui_red : colour::accent);
+        pixels.panel(left, info_top, width, info_height, colour::fill,
+                     over_spent || (check.asking && check.replaces) ? colour::ui_red : colour::accent);
 
-        if(over_spent)
+        if(check.asking)
+        {
+            // Start once more begins; anything else goes back to choosing.
+            if(left_points > 0)
+            {
+                length = ui::append_int(text, 0, left_points);
+                ui::append(text, length, left_points == 1 ? " POINT LEFT TO SPEND" : " POINTS LEFT TO SPEND");
+                pixels.text(text_x, info_top + 4, text, colour::accent);
+            }
+
+            if(check.replaces)
+            {
+                pixels.text(text_x, info_top + (left_points > 0 ? 11 : 4), "THIS REPLACES THE SAVED WORLD",
+                            colour::ui_red);
+            }
+
+            pixels.text_right(right + 1, info_top + 4, "START AGAIN", colour::text);
+            pixels.text_right(right + 1, info_top + 11, "TO BEGIN", colour::quiet);
+        }
+        else if(over_spent)
         {
             pixels.text(text_x, info_top + 4, "TOO MANY TRAITS", colour::ui_red);
             length = ui::append(text, 0, "GIVE BACK ");
@@ -210,32 +227,49 @@ namespace
             trait value = focus.focused();
             const trait_info& value_info = info(value);
             pixels.text(text_x, info_top + 4, value_info.name, colour::accent);
-            length = ui::append(text, 0, good_trait(value) ? "COSTS " : "GIVES ");
-            ui::append_int(text, length, value_info.points);
-            pixels.text_right(right + 1, info_top + 4, text, good_trait(value) ? colour::ui_orange : colour::ui_green);
+            // Taking it drops its opposite (playtest 6: the points jumped by both with no word why).
+            bool replaces = ! lone_trait(value) && ! (choice.traits & (1u << int(value))) &&
+                            (choice.traits & (1u << int(opposite(value))));
+
+            if(replaces)
+            {
+                length = ui::append(text, 0, "REPLACES ");
+                ui::append(text, length, info(opposite(value)).name);
+                pixels.text_right(right + 1, info_top + 4, text, colour::text);
+            }
+            else
+            {
+                length = ui::append(text, 0, good_trait(value) ? "COSTS " : "GIVES ");
+                ui::append_int(text, length, value_info.points);
+                pixels.text_right(right + 1, info_top + 4, text,
+                                  good_trait(value) ? colour::ui_orange : colour::ui_green);
+            }
             pixels.text(text_x, info_top + 11, value_info.effect, colour::quiet);
         }
 
+        // The footer of every screen (playtest 6: B BACK sat at the right edge): the main action first, B after it.
         int x = pixels.text(12, footer_y, "A", colour::text) + 4;
         x = pixels.text(x, footer_y, "PICK", colour::quiet) + 10;
-        x = pixels.text(x, footer_y, "D-PAD", colour::text) + 4;
-        x = pixels.text(x, footer_y, "MOVE", colour::quiet) + 10;
         // Start is greyed out until the points add up.
         x = pixels.text(x, footer_y, "START", over_spent ? colour::border : colour::text) + 4;
-        pixels.text(x, footer_y, "BEGIN", over_spent ? colour::border : colour::quiet);
-        pixels.text_right(228, footer_y, "BACK", colour::quiet);
-        pixels.text_right(228 - canvas::text_width("BACK") - 4, footer_y, "B", colour::text);
+        x = pixels.text(x, footer_y, "BEGIN", over_spent ? colour::border : colour::quiet) + 10;
+        x = pixels.text(x, footer_y, "B", colour::text) + 4;
+        x = pixels.text(x, footer_y, "BACK", colour::quiet) + 10;
+        x = pixels.text(x, footer_y, "D-PAD", colour::text) + 4;
+        pixels.text(x, footer_y, "CHOOSE", colour::quiet);
     }
 }
 
-bool character_creation(character_choice& result)
+bool character_creation(character_choice& result, bool replaces_save)
 {
     music::title();
 
     canvas pixels;
     character_choice choice;
     cursor focus;
-    draw(pixels, choice, focus);
+    begin_check check;
+    check.replaces = replaces_save;
+    draw(pixels, choice, focus, check);
 
     #if KX_DUMP
         int frames = 0;
@@ -337,7 +371,14 @@ bool character_creation(character_choice& result)
             }
             else if(up || down)
             {
-                focus.row = (focus.row + (down ? 1 : pairs - 1)) % pairs;
+                // Rows wrap within the column (playtest 6: Down from Eagle-Eyed went across to the Smoker, the bad
+                // column's lone last row); up from the first goes to the occupation.
+                do
+                {
+                    focus.row = (focus.row + (down ? 1 : pairs - 1)) % pairs;
+                }
+                while(lone_trait(trait(focus.row * 2)) && focus.column != (good_trait(trait(focus.row * 2)) ? 0 : 1));
+
                 focus.settle();
                 focus.follow();
                 changed = true;
@@ -360,15 +401,32 @@ bool character_creation(character_choice& result)
             }
         }
 
+        if(check.asking && (changed || up || down || left_pressed || right_pressed || pick))
+        {
+            check.asking = false;
+            changed = true;
+        }
+
         if(begin)
         {
-            if(points(choice) >= 0)
+            int left_points = points(choice);
+
+            if(left_points < 0)
+            {
+                sfx::play(sfx::id::DENIED, milli(600));
+            }
+            else if(check.asking || (left_points == 0 && ! check.replaces))
             {
                 result = choice;
                 return true;
             }
-
-            sfx::play(sfx::id::DENIED, milli(600));
+            else
+            {
+                // Once more begins (playtest 6: unspent points, the saved world replaced).
+                check.asking = true;
+                sfx::play(sfx::id::MOODLE, milli(500));
+                changed = true;
+            }
         }
 
         if(bn::keypad::b_pressed())
@@ -378,7 +436,7 @@ bool character_creation(character_choice& result)
 
         if(changed)
         {
-            draw(pixels, choice, focus);
+            draw(pixels, choice, focus, check);
         }
 
         bn::core::update();

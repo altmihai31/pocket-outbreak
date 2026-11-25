@@ -237,7 +237,7 @@ void skills_screen::_draw(game& owner)
     }
 
     pixels.rect(0, footer_top, canvas::width, canvas::height - footer_top, canvas::backdrop);
-    constexpr hud::hint hints[] = { { "D-PAD", "CHOOSE" }, { "B", "CLOSE" } };
+    constexpr hud::hint hints[] = { { "B", "CLOSE" }, { "D-PAD", "CHOOSE" } };
     screen.hints(footer_y, hints, 2, false);
 }
 

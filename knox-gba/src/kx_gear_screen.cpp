@@ -159,6 +159,32 @@ void gear_screen::open(game& owner)
     _dirty = true;
     _choosing = false;
     _moving = -1;
+
+    // On a bag slot that has emptied (the last of a stack eaten or used), the nearest one that holds something
+    // (playtest 6).
+    const inventory& items = owner.hero().items();
+
+    if(_panel == 1 && items.slot(_cursor[1]).empty())
+    {
+        for(int distance = 1; distance < inventory::slots; ++distance)
+        {
+            int before = _cursor[1] - distance;
+            int after = _cursor[1] + distance;
+
+            if(before >= 0 && ! items.slot(before).empty())
+            {
+                _cursor[1] = before;
+                break;
+            }
+
+            if(after < inventory::slots && ! items.slot(after).empty())
+            {
+                _cursor[1] = after;
+                break;
+            }
+        }
+    }
+
     owner.hud_ref().begin_screen();
     sfx::play(sfx::id::ZIP, milli(500));
 }
@@ -394,14 +420,16 @@ void gear_screen::_draw(game& owner)
         }
     }
 
-    // Carried, with the weight against capacity (danger colour when over).
+    // Carried: PACK, and the weight against capacity flush right (playtest 6; danger colour when over).
     pixels.panel(carried_left, panels_top, panel_width(carried_columns), panels_height, colour::fill,
                  colour::border);
+    pixels.text(carried_left + 1 + padding, title_y, "PACK", colour::quiet);
     int length = ui::append_weight(text, 0, items.weight());
     length = ui::append(text, length, " / ");       // spaced like the Health tab and the search screen
     length = ui::append_weight(text, length, items.capacity());
     ui::append(text, length, " KG");
-    pixels.text(carried_left + 1 + padding, title_y, text, items.heavy() ? colour::ui_red : colour::quiet);
+    pixels.text_right(carried_left + panel_width(carried_columns) - 2 - padding, title_y, text,
+                      items.heavy() ? colour::ui_red : colour::quiet);
 
     for(int slot = 0; slot < inventory::slots; ++slot)
     {
@@ -508,11 +536,16 @@ void gear_screen::_draw(game& owner)
             for(int index = 0; index < offered.count; ++index)
             {
                 gear_action action = offered.actions[index];
+                // The chosen one on the highlight bar, as in every list (playtest 6: it was ">DRINK").
                 bool chosen = index == _choice;
-                length = ui::append(text, 0, chosen ? ">" : " ");
-                ui::append(text, length, action == ACTION_USE ? use_label(selected, _panel == 0) :
-                                                                action_labels[action]);
-                x = pixels.text(x, info_line_2, text, chosen ? colour::accent : colour::quiet) + 8;
+                const char* label = action == ACTION_USE ? use_label(selected, _panel == 0) : action_labels[action];
+
+                if(chosen)
+                {
+                    pixels.rect(x - 2, info_line_2 - 1, canvas::text_width(label) + 4, 7, colour::accent);
+                }
+
+                x = pixels.text(x, info_line_2, label, chosen ? colour::fill : colour::text) + 8;
             }
         }
         else
@@ -526,20 +559,20 @@ void gear_screen::_draw(game& owner)
 
     if(_moving >= 0)
     {
-        constexpr hud::hint move_hints[] = { { "D-PAD", "PICK SLOT" }, { "A", "PUT HERE" }, { "B", "CANCEL" } };
+        constexpr hud::hint move_hints[] = { { "A", "PUT HERE" }, { "B", "CANCEL" }, { "D-PAD", "PICK SLOT" } };
         screen.hints(footer_y, move_hints, 3, false);
     }
     else if(_choosing)
     {
-        constexpr hud::hint choose_hints[] = { { "<>", "CHOOSE" }, { "A", "OK" }, { "B", "CANCEL" } };
+        constexpr hud::hint choose_hints[] = { { "A", "OK" }, { "B", "CANCEL" }, { "D-PAD", "CHOOSE" } };
         screen.hints(footer_y, choose_hints, 3, false);
     }
     else
     {
         // As mockup 04: the tab bar shows L1/R1; the footer's right side holds the save and quit hint.
         // Playtest 5: an empty slot has no actions, so its footer offers none.
-        constexpr hud::hint gear_hints[] = { { "A", "ACTIONS" }, { "B", "CLOSE" } };
-        screen.hints(footer_y, selected.empty() ? gear_hints + 1 : gear_hints, selected.empty() ? 1 : 2, false);
+        constexpr hud::hint gear_hints[] = { { "A", "ACTIONS" }, { "B", "CLOSE" }, { "D-PAD", "CHOOSE" } };
+        screen.hints(footer_y, selected.empty() ? gear_hints + 1 : gear_hints, selected.empty() ? 2 : 3, false);
     }
 }
 

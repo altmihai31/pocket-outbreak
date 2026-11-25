@@ -2005,6 +2005,7 @@ game_exit game::run()
 
         _update_menu_dim();
         bn::core::update();
+        _hud.flush();
         sfx::new_frame();
     }
 }
@@ -2378,6 +2379,13 @@ void game::_update_play()
         _hud.set_work_bar(screen_x(_player.position()) + (bn::display::width() / 2),
                           screen_y(_player.position()) + (bn::display::height() / 2) - head_height,
                           _door_work_frame, _door_work != work_kind::NONE ? _door_work_length : 0);
+    }
+
+    // The prompts keep clear of the player's head.
+    {
+        constexpr int head_height = 24;
+        _hud.set_player_head(screen_x(_player.position()) + (bn::display::width() / 2),
+                             screen_y(_player.position()) + (bn::display::height() / 2) - head_height);
     }
 
     // Over the player's head while aiming: the reload bar, or the JAMMED box.
@@ -3354,7 +3362,18 @@ void game::_tick_minute(bool sleeping)
     input.sleeping = sleeping;
 
     // Weather and season: rain soaks you outdoors (a raincoat keeps most of it off), the season cools the air.
+    // A change of weather says so (playtest 6: fog's paler screen looked like a fault).
+    weather_kind was = _weather;
     _weather = weather::at(_world_minute);
+
+    if(_weather != was && ! sleeping)
+    {
+        const char* change = _weather == weather_kind::FOG ? "FOG ROLLS IN" :
+                             _weather == weather_kind::RAIN ? "IT STARTS TO RAIN" :
+                             _weather == weather_kind::STORM ? "A STORM BREAKS" :
+                             was == weather_kind::FOG ? "THE FOG LIFTS" : "THE RAIN STOPS";
+        toast(change, hud_tiles::bank_normal, 120);
+    }
     input.season_temp = weather::season_temp(day());
 
     if(weather::wet(_weather) && ! _inside && ! sleeping)

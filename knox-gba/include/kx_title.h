@@ -13,6 +13,7 @@ struct title_choice
     uint32_t seed = 0;
     bool load = false;      // continue the saved world
     bool new_survivor = false;  // ... whose last survivor died (a new one is made first)
+    bool replaces = false;      // a new world with a saved one it replaces
     sandbox::settings sandbox;  // a new world's sandbox settings (a saved one's come from its save)
 };
 

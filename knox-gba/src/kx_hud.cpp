@@ -121,36 +121,6 @@ namespace
                bank == hud_tiles::bank_danger ? colour::ui_red : colour::border;
     }
 
-    void clock_text(char* output, int world_minute)
-    {
-        // "DAY 3 18:40", then "NIGHT 3 23:10"; the hours after midnight still belong to that night.
-        int minute_of_day = world_minute % (24 * 60);
-        int day = (world_minute / (24 * 60)) + 1;
-        bool night = is_night(minute_of_day);
-
-        if(night && minute_of_day < day_start_hour * 60)
-        {
-            day = bn::max(day - 1, 1);
-        }
-
-        // The date (spec: the world starts on 1 July): "3 JUL ` 18:40", "NIGHT 3 JUL ` 23:10".
-        int length = ui::append(output, 0, night ? "NIGHT " : "");
-        timeline::date_text(output + length, day);
-
-        while(output[length])
-        {
-            ++length;
-        }
-
-        length = ui::append(output, length, " ` ");
-        output[length++] = char('0' + (minute_of_day / 600));
-        output[length++] = char('0' + ((minute_of_day / 60) % 10));
-        output[length++] = ':';
-        output[length++] = char('0' + ((minute_of_day % 60) / 10));
-        output[length++] = char('0' + (minute_of_day % 10));
-        output[length] = 0;
-    }
-
     // Second line of the status box: CPU now and the peak over the last second.
     void status_line(char* output, int cpu, int peak)
     {
@@ -218,6 +188,36 @@ int hud::style_colour(int bank)
 hud::hud()
 {
     _reset();
+}
+
+void hud::clock_text(char* output, int world_minute)
+{
+    // "DAY 3 18:40", then "NIGHT 3 23:10"; the hours after midnight still belong to that night.
+    int minute_of_day = world_minute % (24 * 60);
+    int day = (world_minute / (24 * 60)) + 1;
+    bool night = is_night(minute_of_day);
+
+    if(night && minute_of_day < day_start_hour * 60)
+    {
+        day = bn::max(day - 1, 1);
+    }
+
+    // The date (spec: the world starts on 1 July): "3 JUL ` 18:40", "NIGHT 3 JUL ` 23:10".
+    int length = ui::append(output, 0, night ? "NIGHT " : "");
+    timeline::date_text(output + length, day);
+
+    while(output[length])
+    {
+        ++length;
+    }
+
+    length = ui::append(output, length, " ` ");
+    output[length++] = char('0' + (minute_of_day / 600));
+    output[length++] = char('0' + ((minute_of_day / 60) % 10));
+    output[length++] = ':';
+    output[length++] = char('0' + ((minute_of_day % 60) / 10));
+    output[length++] = char('0' + (minute_of_day % 10));
+    output[length] = 0;
 }
 
 void hud::_reset()
@@ -319,6 +319,25 @@ void hud::update(const player& target, int world_minute)
                 }
             }
         }
+    }
+
+    _flush_pending = true;
+}
+
+void hud::flush()
+{
+    // Playtest 6: drawn here, in the vertical blank, not while the screen is being drawn: a box redrawn as the
+    // display passed its rows showed for a frame without its text (an empty MASH A bar, a blank prompt).
+    if(! _flush_pending)
+    {
+        return;
+    }
+
+    _flush_pending = false;
+
+    if(_backdrop)
+    {
+        return;
     }
 
     for(int index = 0; index < ELEMENTS; ++index)
@@ -927,8 +946,11 @@ void hud::_draw_hotbar()
     {
         int x = hotbar_left + (slot * slot_step);
         item_id id = items.hotbar(slot);
-        _canvas.panel(x, slots_top, slot_size, slot_size, colour::panel,
-                      slot == target.selected_slot() ? colour::text : colour::border);
+
+        // The white frame only while that slot's item is in hand (playtest 6: it stayed after Select put it away).
+        bool in_hand = slot == target.selected_slot() && id != item_id::NONE &&
+                       items.equipped(equip_slot::HAND).id == id;
+        _canvas.panel(x, slots_top, slot_size, slot_size, colour::panel, in_hand ? colour::text : colour::border);
 
         if(id != item_id::NONE && items.available(id))
         {
@@ -946,8 +968,10 @@ void hud::_draw_hotbar()
             }
         }
 
+        // The number on a dark backing in the corner, so it reads over the icon (playtest 6).
         char digit[2] = { char('1' + slot), 0 };
-        _canvas.text(x + 2, slots_top + 1, digit, colour::quiet);
+        _canvas.rect(x + 1, slots_top + 1, canvas::text_width(digit) + 1, 6, colour::panel);
+        _canvas.text(x + 1, slots_top + 1, digit, colour::quiet);
     }
 
     // Equipped item in an accent box, with its condition bar underneath (spec: condition shows on the
@@ -1188,7 +1212,7 @@ void hud::set_menu_backdrop(bool enabled)
     {
         _backdrop = true;
         _canvas.rect(0, 0, canvas::width, canvas::height, colour::fill);
-        _canvas.frame(3, 3, canvas::width - 6, canvas::height - 6, colour::border);
+        _canvas.frame(4, 4, canvas::width - 8, canvas::height - 8, colour::border);       // the HUD boxes' 4 px inset (playtest 6)
     }
     else
     {
@@ -1259,6 +1283,17 @@ void hud::set_prompt(int center_x, int target_top_y, const char* text)
     _prompt[index] = 0;
     _prompt_x = center_x;
     _prompt_y = bn::clamp(target_top_y - prompt_gap - prompt_height, prompt_min_top, prompt_max_top);
+
+    // Over the player instead: lifted clear of their head.
+    constexpr int head_half_width = 8;
+    constexpr int body_height = 24;
+    int half_width = (canvas::text_width(_prompt) + 6) / 2;
+
+    if(center_x - half_width < _head_x + head_half_width && center_x + half_width > _head_x - head_half_width &&
+       _prompt_y + prompt_height > _head_y && _prompt_y < _head_y + body_height)
+    {
+        _prompt_y = bn::clamp(_head_y - prompt_gap - prompt_height, prompt_min_top, prompt_max_top);
+    }
 }
 
 void hud::death_screen(const char* cause, int kills, int minutes_survived, int distance_tiles)
@@ -1318,7 +1353,9 @@ void hud::death_screen(const char* cause, int kills, int minutes_survived, int d
     }
 
     _canvas.text_centered(center, 98, text, colour::text);
-    _canvas.text_centered(center, 126, "A: NEW SURVIVOR", colour::accent);
+    // The footer style of every other screen (playtest 6: it was "A: NEW SURVIVOR").
+    constexpr hint next[] = { { "A", "NEW SURVIVOR" } };
+    hints(126, next, 1, true);
 }
 
 void hud::begin_screen()
@@ -1370,7 +1407,7 @@ void hud::tab_bar(int selected)
     constexpr int top = 4;
     constexpr int bar_width = canvas::width - (left * 2);
     constexpr int bar_height = 14;
-    constexpr int gap = 5;
+    constexpr int gap = 7;                      // playtest 6: 4 px clear of the accent block (it was 2)
     constexpr int block_padding = 3;
     constexpr int text_y = top + 5;
 
@@ -1459,8 +1496,9 @@ void hud::hints(int y, const hint* items, int count, bool centered)
 
     for(int index = 0; index < count; ++index)
     {
-        x = _canvas.text(x, y, items[index].button, colour::text) + button_gap;
-        x = _canvas.text(x, y, items[index].action, colour::quiet) + hint_gap;
+        bool enabled = items[index].enabled;
+        x = _canvas.text(x, y, items[index].button, enabled ? colour::text : colour::border) + button_gap;
+        x = _canvas.text(x, y, items[index].action, enabled ? colour::quiet : colour::border) + hint_gap;
     }
 }
 

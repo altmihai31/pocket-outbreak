@@ -389,11 +389,11 @@ void map_screen::_draw(game& owner)
     if(hero.items().find(item_id::MAP) < 0)
     {
         // Spec: without a map there is no map screen.
-        pixels.panel(map_left, map_top, map_width, map_height, colour::fill, colour::border);
-        pixels.text_centered(map_left + (map_width / 2), map_top + (map_height / 2) - 8, "NO MAP", colour::text);
-        pixels.text_centered(map_left + (map_width / 2), map_top + (map_height / 2) + 2,
-                             "FIND ONE IN HOUSES AND SHOPS", colour::quiet);
-        constexpr hud::hint hints[] = { { "B", "BACK" } };
+        // On the standard frame (playtest 6: it had the map's own inset).
+        pixels.panel(12, 22, 216, 120, colour::fill, colour::border);
+        pixels.text_centered(canvas::width / 2, 22 + 60 - 8, "NO MAP", colour::text);
+        pixels.text_centered(canvas::width / 2, 22 + 60 + 2, "FIND ONE IN HOUSES AND SHOPS", colour::quiet);
+        constexpr hud::hint hints[] = { { "B", "CLOSE" } };
         screen.hints(footer_y, hints, 1, false);
         return;
     }
@@ -574,7 +574,7 @@ void map_screen::_draw(game& owner)
     pixels.frame(map_left - 1, map_top - 1, map_width + 2, map_height + 2, colour::border);
 
     pixels.rect(0, footer_top, canvas::width, canvas::height - footer_top, canvas::backdrop);
-    constexpr hud::hint hints[] = { { "D-PAD", "MOVE" }, { "A", "MARK" }, { "B", "BACK" } };
+    constexpr hud::hint hints[] = { { "A", "MARK" }, { "B", "CLOSE" }, { "D-PAD", "MOVE" } };
     screen.hints(footer_y, hints, 3, false);
 }
 

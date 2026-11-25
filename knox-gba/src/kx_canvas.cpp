@@ -147,6 +147,37 @@ int canvas::text_centered(int center_x, int y, const char* value, int colour)
     return text(center_x - (text_width(value) / 2), y, value, colour);
 }
 
+void canvas::scroll_marks(int right_x, int y, bool more_above, bool more_below)
+{
+    int down_left = right_x - 4;
+    int up_left = down_left - 7;
+
+    for(int step = 0; step < 3; ++step)
+    {
+        rect(up_left + 2 - step, y + 1 + step, 1 + (step * 2), 1, more_above ? colour::text : colour::border);
+        rect(down_left + step, y + 1 + step, 5 - (step * 2), 1, more_below ? colour::text : colour::border);
+    }
+}
+
+void canvas::tick_box(int x, int y, bool ticked, int colour)
+{
+    if(ticked)
+    {
+        // A tick: the short stroke down to the right, then the long one up.
+        rect(x, y + 2, 1, 1, colour);
+        rect(x + 1, y + 3, 1, 1, colour);
+        rect(x + 2, y + 4, 1, 1, colour);
+        rect(x + 3, y + 3, 1, 1, colour);
+        rect(x + 4, y + 2, 1, 1, colour);
+        rect(x + 5, y + 1, 1, 1, colour);
+        rect(x + 6, y, 1, 1, colour);
+    }
+    else
+    {
+        frame(x, y, 5, 5, colour);
+    }
+}
+
 void canvas::icon(int x, int y, item_icon value, int source_x, int source_y, int source_width, int source_height)
 {
     // Icons are only drawn when they fit on screen (layouts keep them there).

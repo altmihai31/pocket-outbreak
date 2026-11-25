@@ -57,6 +57,9 @@ public:
 
     void update(const player& target, int world_minute);
 
+    // Draws what update() found changed; called just after bn::core::update(), in the vertical blank.
+    void flush();
+
     void set_perf_visible(bool visible);
 
     [[nodiscard]] bool perf_visible() const
@@ -79,12 +82,24 @@ public:
     // Context prompt ("[A] SEARCH") centred above a screen pixel; center_x < 0 hides it.
     void set_prompt(int center_x, int target_top_y, const char* text);
 
+    // Where the player's head is on screen (its centre and top), so a prompt never covers it (playtest 6: "[A]
+    // WRECK" sat over the survivor's head beside a car).
+    void set_player_head(int center_x, int top_y)
+    {
+        _head_x = center_x;
+        _head_y = top_y;
+    }
+
     // The reload bar or the JAMMED box over the player's head (mockup 11), at screen pixels; center_x < 0 hides it.
     void set_gun_box(int center_x, int head_y);
 
     // An action's progress bar in the same place (milestone 12.7: forcing or picking a lock): filled of length;
     // length 0 hides it. It wins over the gun box.
     void set_work_bar(int center_x, int head_y, int filled, int length);
+
+    // The HUD clock's text: "3 JUL ` 18:40", "NIGHT 3 JUL ` 23:10" (the hours after midnight belong to that night);
+    // the title's Continue line uses it too (playtest 6: there it showed the next day).
+    static void clock_text(char* output, int world_minute);
 
     void death_screen(const char* cause, int kills, int minutes_survived, int distance_tiles);
 
@@ -113,11 +128,13 @@ public:
     // Start menu tab bar (mockup 04; 0 Gear, 1 Health, ...).
     void tab_bar(int selected);
 
-    // Footer button hints at pixel row y: button in the text colour, action quiet (mockup 04).
+    // Footer button hints at pixel row y: button in the text colour, action quiet (mockup 04); one that can't be done
+    // now greyed out (playtest 6: as Start on the new survivor screen).
     struct hint
     {
         const char* button;
         const char* action;
+        bool enabled = true;
     };
 
     void hints(int y, const hint* items, int count, bool centered);
@@ -192,6 +209,9 @@ private:
     area _screen_toast_area;                // and where
     int _prompt_x = -1;
     int _prompt_y = 0;
+    bool _flush_pending = false;
+    int _head_x = -1000;
+    int _head_y = 0;
     int _gun_x = -1;
     int _gun_y = 0;
     int _work_x = -1;

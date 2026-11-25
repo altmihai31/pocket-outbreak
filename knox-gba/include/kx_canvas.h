@@ -89,6 +89,13 @@ public:
     int text_centered(int center_x, int y, const char* value, int colour);
     [[nodiscard]] static int text_width(const char* value);
 
+    // A list's scroll marks (playtest 6): an up and a down triangle (5x3 each) ending at right_x, side by side on a
+    // heading line at y; each in the text colour while more rows lie that way, else in the border colour.
+    void scroll_marks(int right_x, int y, bool more_above, bool more_below);
+
+    // A tick box (5x5) at (x, y): an outline when not ticked, a tick in it when ticked.
+    void tick_box(int x, int y, bool ticked, int colour);
+
     // Part of a 16x16 icon (source rectangle in icon pixels) at (x, y).
     void icon(int x, int y, item_icon value, int source_x = 0, int source_y = 0, int source_width = 16,
               int source_height = 16);

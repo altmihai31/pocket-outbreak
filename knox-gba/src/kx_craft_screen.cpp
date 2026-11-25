@@ -117,33 +117,16 @@ void craft_screen::_draw(game& owner)
     pixels.rect(0, 0, canvas::width, canvas::height, canvas::backdrop);
     screen.tab_bar(2);
 
-    // The heat source nearby, then the recipes.
+    // The recipes, scrolled so the selected one shows, with marks on the heading line when more lie above or below
+    // (playtest 6: the heat nearby headed the list, and the marks sat on its underline; the heat is now the
+    // recipe's HEAT line).
     heat_kind heat = owner.heat_source();
     pixels.panel(list_left, panels_top, list_width, panels_height, colour::fill, colour::border);
-    pixels.text(list_left + 5, panels_top + 4, "HEAT", colour::quiet);
-    pixels.text_right(list_left + list_width - 5, panels_top + 4, heat_name(heat),
-                      heat == heat_kind::NONE ? colour::ui_red : colour::ui_green);
+    pixels.text(list_left + 5, panels_top + 4, "RECIPES", colour::quiet);
     pixels.rect(list_left + 4, panels_top + 11, list_width - 8, 1, colour::border);
-
-    // Scrolled so the selected recipe shows, with marks when more lie above or below.
     int first = bn::clamp(_selected - (visible_rows / 2), 0, bn::max(recipe_count - visible_rows, 0));
-
     static_assert(recipe_count <= int(sizeof(_order) / sizeof(_order[0])));
-    int arrow_x = list_left + list_width - 8;
-
-    for(int step = 0; step < 3; ++step)
-    {
-        if(first > 0)
-        {
-            pixels.rect(arrow_x - step, rows_top - 4 + step, 1 + (step * 2), 1, colour::quiet);
-        }
-
-        if(first + visible_rows < recipe_count)
-        {
-            pixels.rect(arrow_x - step, rows_top + (visible_rows * row_step) + 1 - step, 1 + (step * 2), 1,
-                        colour::quiet);
-        }
-    }
+    pixels.scroll_marks(list_left + list_width - 6, panels_top + 4, first > 0, first + visible_rows < recipe_count);
 
     for(int row = first; row < recipe_count && row < first + visible_rows; ++row)
     {
@@ -187,13 +170,19 @@ void craft_screen::_draw(game& owner)
         const ingredient& need = recipe.ingredients[which];
         int have = owner.carries(need.item);
         length = ui::append_int(text, 0, have);
-        length = ui::append(text, length, "/");
-        ui::append_int(text, length, need.amount);
+        length = ui::append(text, length, " / ");
+        length = ui::append_int(text, length, need.amount);
+
+        // Fuel in litres, as the car writes it (playtest 6: "FUEL (LITRES) 0/1" against the car's "FUEL 0 L").
+        if(need.item == fuel_litres)
+        {
+            ui::append(text, length, " L");
+        }
         char name[24];
         int name_length = 0;
 
         // Item names are mixed case in the table; the screen shows capitals.
-        const char* need_name = need.item == any_produce ? "Produce" : need.item == fuel_litres ? "Fuel (litres)" :
+        const char* need_name = need.item == any_produce ? "Produce" : need.item == fuel_litres ? "Fuel" :
                                 info(need.item).name;
 
         for(const char* c = need_name; *c && name_length < 20; ++c)
@@ -215,8 +204,9 @@ void craft_screen::_draw(game& owner)
 
     if(! recipe.no_heat)
     {
+        // The heat nearby by name (it headed the list before playtest 6).
         bool heated = recipe.fire_only ? heat == heat_kind::CAMPFIRE : heat != heat_kind::NONE;
-        need_line(pixels, y, recipe.fire_only ? "OPEN FIRE" : "HEAT", heated ? "OK" : "NO", heated);
+        need_line(pixels, y, recipe.fire_only ? "OPEN FIRE" : "HEAT", heat_name(heat), heated);
         y += 7;
     }
 
@@ -265,9 +255,9 @@ void craft_screen::_draw(game& owner)
     pixels.text(detail_x, y + 34, text, colour::quiet);
 
     pixels.rect(0, footer_top, canvas::width, canvas::height - footer_top, canvas::backdrop);
-    constexpr hud::hint cook_hints[] = { { "A", "COOK" }, { "B", "CLOSE" } };
-    constexpr hud::hint make_hints[] = { { "A", "MAKE" }, { "B", "CLOSE" } };
-    screen.hints(footer_y, recipe.no_heat ? make_hints : cook_hints, 2, false);
+    constexpr hud::hint cook_hints[] = { { "A", "COOK" }, { "B", "CLOSE" }, { "D-PAD", "CHOOSE" } };
+    constexpr hud::hint make_hints[] = { { "A", "MAKE" }, { "B", "CLOSE" }, { "D-PAD", "CHOOSE" } };
+    screen.hints(footer_y, recipe.no_heat ? make_hints : cook_hints, 3, false);
 }
 
 }
