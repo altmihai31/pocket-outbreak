@@ -85,7 +85,7 @@ gpSP and mGBA mapping on OnionOS).
 | B | tap: shove (stagger every zombie in front); hold while moving: sprint |
 | L1 | toggle crouch (on release) |
 | Select | use the selected hotbar item: equip or put away a weapon, eat or drink, take medicine; the hammer opens build mode, the shovel opens it on the farm plot |
-| L1 + Select | select the next hotbar slot |
+| L1 + Select | select the next hotbar slot (the selected slot has a yellow frame, white while its item is in hand) |
 | Start | Start menu (pauses): Gear, Health, Craft, Skills, Map and Menu tabs, L1/R1 to switch. Menu (also on the title: MENU with a save, Select on the new world screen without one; playtest 3, mockup 20) opens SETTINGS, GUIDE or WORLD with A (WORLD: the seed and sandbox settings, playtest 4; on the title only with a save), B goes back; its SAVE AND QUIT (not on the title) saves and quits to the title when A is held on it for a second (playtest 4; it was Select held on any tab), and shows "WORLD n% FULL" when the save's lists pass 80%. Settings: music and sound effect volumes (off, low, medium, full), screen shake, the CPU meter; kept in the save. Guide: how to play in 13 topics (Up/Down a topic, Left/Right its pages); the text is in `tools/assets/guide.py`, wrapped to the page there |
 | R1 (held) | aim a gun: A fires, B reloads (see Guns) |
 | Select + Start | debug tuning menu (pauses); only in tester (`DEBUG=1`) and bench builds since playtest 5 |
