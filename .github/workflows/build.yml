@@ -27,6 +27,10 @@ jobs:
         working-directory: knox-gba
         run: make -j"$(nproc)" PYTHON=python3
 
+      - name: Build the save bench (knox_save.gba)
+        working-directory: knox-gba
+        run: make -j"$(nproc)" PYTHON=python3 BENCH=8
+
       - name: Package
         run: |
           mkdir dist
@@ -40,8 +44,48 @@ jobs:
           name: pocket-outbreak-${{ github.sha }}
           path: dist/
 
-      - name: Publish a release (tags only)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Upload the save bench
+        uses: actions/upload-artifact@v4
+        with:
+          name: save-bench
+          path: knox-gba/knox_save.gba
+
+  save-test:
+    # Plays the save bench headless in mGBA: save a world, load it, and fail if anything came back different.
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install mGBA
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends mgba-sdl
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: save-bench
+
+      - name: Save round trip
+        run: python3 knox-gba/tools/save_roundtrip_test.py knox_save.gba --mgba /usr/games/mgba --log knox_save.log
+
+      - name: Upload the bench log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: save-bench-log
+          path: knox_save.log
+
+  release:
+    # Tags only, and only once the save test has passed.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, save-test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: pocket-outbreak-${{ github.sha }}
+          path: dist
+
+      - name: Publish the release
         uses: softprops/action-gh-release@v2
         with:
           files: |
