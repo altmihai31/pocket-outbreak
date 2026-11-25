@@ -39,8 +39,9 @@ hotbar), B in a wreck's trunk (back to the car screen), the blank info box on an
   containers, most of it container records), so two copies only cover the first hour or so. Beyond that a cut
   mid-write still loses the world's changes (never the survivor). Keeping both copies needs the world block under
   14 KB: smaller container records and horde counts packed into fewer bytes.
-- **Doors (7):** a mockup of side doors that show from outside (a notch in the roof edge, or the door's frame drawn
-  over the eave) before any change.
+- **Doors (7):** mockup `mockups/23-side-doors.png` (`tools/mockup_side_doors.py`), side doors closed and open: A now
+  (the step only), B a notch (the roof steps back 6 px, the door frame shows in the gap: wood shut, dark open), C the
+  door's edge past the wall line (a slab shut, swung out along the step open), D both. Waiting on the pick.
 - **P3, a later UI pass:** wreck details for parts-only wrecks, trait screen (opposite traits, unspent points, Down
   from Eagle-Eyed), the date after midnight, the new world footer strip, the 25-item UI audit and the cross-screen
   conventions, the washed-out daylight blend on the device.
