@@ -34,11 +34,11 @@ Everything runs on real GBA hardware at a locked 60 fps. It's built with the [Bu
   </tr>
   <tr>
     <td><img src="screenshots/gear.png" alt="The Gear tab: worn clothes, the bag and the hotbar"></td>
-    <td><img src="screenshots/car.png" alt="The car screen: parts, trunk, glove box, hotwiring"></td>
+    <td><img src="screenshots/car.png" alt="A wreck on the car screen: its parts and what taking one out needs"></td>
   </tr>
   <tr>
     <td align="center"><sub><b>Scavenge</b> 200 items from houses, shops and set pieces.</sub></td>
-    <td align="center"><sub><b>Get a car running:</b> a battery, fuel and a key, or hotwire it.</sub></td>
+    <td align="center"><sub><b>Get a car running</b> with a battery, fuel and a key, or hotwire it. Strip wrecks for parts.</sub></td>
   </tr>
   <tr>
     <td><img src="screenshots/map.png" alt="The Map tab with a town marked"></td>
@@ -49,7 +49,7 @@ Everything runs on real GBA hardware at a locked 60 fps. It's built with the [Bu
     <td align="center"><sub><b>A month in,</b> the grid is dead and a flashlight is all you have.</sub></td>
   </tr>
   <tr>
-    <td><img src="screenshots/new-world.png" alt="New world: seed and sandbox settings"></td>
+    <td><img src="screenshots/new-world.png" alt="New world: seed and sandbox settings over the drifting map"></td>
     <td><img src="screenshots/guide.png" alt="The in-game guide"></td>
   </tr>
   <tr>
@@ -61,7 +61,7 @@ Everything runs on real GBA hardware at a locked 60 fps. It's built with the [Bu
 ### What's in it
 
 - **Survival:** hunger, thirst, sleep, body temperature, wounds, infection, stitching and bandages, and moodles that tell you what's wrong.
-- **Zombies:** hordes counted per area that migrate by the hour and hunt by sight and sound. They break windows and barricades, and some crawl.
+- **Zombies:** hordes counted per area that migrate by the hour and hunt by sight and sound. They break windows and barricades, and some crawl. One zombie that grabs you bites; two or more at once are deadly.
 - **Combat:** melee with charge-up swings, shoves and stomps. Four guns with aiming, jams and active reload. Spears, bottles and Molotovs.
 - **Base building:** barricades, crates, campfires, rain collectors, wooden doors, log walls and safehouses.
 - **The wild:** foraging, farming, fishing, hunting deer, rabbits and birds, snares and traps, chopping trees, swimming, and wells.
@@ -69,11 +69,11 @@ Everything runs on real GBA hardware at a locked 60 fps. It's built with the [Bu
 - **A living world:** seasons, weather, the radio, the helicopter, power and water shutoffs, random events, and locked doors, safes and stashes.
 - **Characters:** occupations, traits, 14 skills plus Fitness and Strength, and skill books.
 - **Music and sound:** five original music loops with a director that follows the action, plus a full set of synthesized sound effects.
-- **Saves:** an SRAM save with autosave and a record of past survivors. Death is permanent.
+- **Saves:** an SRAM save with autosave and a record of past survivors. The world is packed and kept in two copies, so a power cut mid-save never loses your survivor or your world. Death is permanent.
 
 ## How to play
 
-1. Download `pocket-outbreak.gba` from the [latest release](https://github.com/altmihai31/pocket-outbreak/releases/latest).
+1. Download `pocket-outbreak.gba` from the [latest release](https://github.com/altmihai31/pocket-outbreak/releases/latest) (v0.2 adds the playtest 5 and 6 fixes: safer saves, grabs, and a UI polish pass).
 2. Open it in any GBA emulator (mGBA is recommended), or copy it to your handheld.
    - **Miyoo Mini / Mini Plus (OnionOS):** put the ROM in `Roms/GBA/`. For box art, put `Pocket Outbreak.png` from the release in `Roms/GBA/Imgs/`, renamed to match the ROM's filename. It runs on both the gpSP and mGBA cores.
    - **Real hardware:** use any GBA flash cart with SRAM saves.
@@ -82,7 +82,7 @@ Everything runs on real GBA hardware at a locked 60 fps. It's built with the [Bu
 
 | Button | In the world | In menus |
 | --- | --- | --- |
-| D-pad | Move. Double-tap and hold to jog. | Navigate |
+| D-pad | Move. Double-tap and hold to jog. | Navigate (hold to scroll lists) |
 | A | The action shown (`[A] SEARCH`, `[A] DRINK`…), otherwise swing. Hold to charge. | Confirm |
 | B | Tap to shove. Hold while moving to sprint. | Back |
 | L | Crouch | Previous tab |
@@ -115,7 +115,7 @@ docker run --rm -v "$PWD":/src -w /src/knox-gba devkitpro/devkitarm \
   sh -c "apt-get update && apt-get install -y python3-pil && make -j PYTHON=python3"
 ```
 
-The game's own [README](knox-gba/README.md) covers the profiler, debug and benchmark builds, the full controls and how the tools work.
+The game's own [README](knox-gba/README.md) covers the profiler, the tester build (`make DEBUG=1`, which also has the tuning menu on Select + Start) and benchmark builds, the full controls and how the tools work.
 
 ## Repository layout
 
