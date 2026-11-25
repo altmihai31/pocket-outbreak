@@ -220,6 +220,8 @@ namespace
     }
 
     // Runs rows of a slot's generation; when the last row is done, replays the chunk's decals.
+    void draw_door_edges(const chunk_slot& slot);
+
     void run_rows(chunk_slot& slot, gen_state& state, int rows)
     {
         if(is_test)
@@ -242,6 +244,7 @@ namespace
             }
 
             slot.ready = true;
+            draw_door_edges(slot);
         }
     }
 
@@ -832,9 +835,113 @@ namespace
     }
 }
 
+namespace
+{
+    [[nodiscard]] bool is_door_edge(world_gfx gfx)
+    {
+        return gfx >= world_gfx::DOOR_EDGE_R_CLOSED && gfx <= world_gfx::DOOR_EDGE_L_OPEN;
+    }
+
+    // Writes a canopy graphic straight into a ready chunk (derived from the door beside it, so never remembered).
+    void set_canopy_now(int tile_x, int tile_y, world_gfx gfx)
+    {
+        if(const chunk_slot* slot = ready_slot(tile_x >> chunk_shift, tile_y >> chunk_shift))
+        {
+            slots[slot - slots].gfx[int(layer::CANOPY)][tile_index(tile_x, tile_y)] = uint8_t(gfx);
+        }
+    }
+
+    void draw_door_edges(const chunk_slot& slot)
+    {
+        // Every side door in the chunk, and those just across its left and right edges (their outside tile may be
+        // in this chunk).
+        int left = slot.chunk_x * chunk_tiles;
+        int top = slot.chunk_y * chunk_tiles;
+
+        auto side_door = [](world_gfx wall)
+        {
+            return wall >= world_gfx::DOOR_TOP_CLOSED && wall <= world_gfx::DOOR_TOP_BROKEN;
+        };
+
+        const uint8_t* walls = slot.gfx[int(layer::WALLS)];
+
+        for(int row = 0, index = 0; row < chunk_tiles; ++row)
+        {
+            int y = top + row;
+
+            for(int column = 0; column < chunk_tiles; ++column, ++index)
+            {
+                if(side_door(world_gfx(walls[index])))
+                {
+                    static_cast<void>(update_door_edge(left + column, y));
+                }
+            }
+
+            if(side_door(gfx_at(layer::WALLS, left - 1, y)))
+            {
+                static_cast<void>(update_door_edge(left - 1, y));
+            }
+
+            if(side_door(gfx_at(layer::WALLS, left + chunk_tiles, y)))
+            {
+                static_cast<void>(update_door_edge(left + chunk_tiles, y));
+            }
+        }
+    }
+}
+
+bool update_door_edge(int tile_x, int tile_y)
+{
+    // Playtest 5 (mockup 23, look C): a door in a side wall under a roof shows past the wall line, on the canopy of
+    // the open tile outside it: a slab of wood when closed, swung out when open, nothing when broken.
+    bool side_wall;
+    door_state state = door_of(gfx_at(layer::WALLS, tile_x, tile_y), side_wall);
+
+    if(! side_wall || ! is_roof(gfx_at(layer::CANOPY, tile_x, tile_y)))
+    {
+        return false;
+    }
+
+    bool changed = false;
+
+    for(int direction = -1; direction <= 1; direction += 2)
+    {
+        int outside_x = tile_x + direction;
+        world_gfx canopy = gfx_at(layer::CANOPY, outside_x, tile_y);
+
+        // The outside: nothing overhead (or this door's edge already), and the building's inside opposite.
+        if((canopy != world_gfx::EMPTY && ! is_door_edge(canopy)) ||
+           ! is_roof(gfx_at(layer::CANOPY, tile_x - direction, tile_y)) || ! loaded(outside_x, tile_y))
+        {
+            continue;
+        }
+
+        bool right = direction > 0;
+        world_gfx edge = state == door_state::CLOSED ? (right ? world_gfx::DOOR_EDGE_R_CLOSED :
+                                                                world_gfx::DOOR_EDGE_L_CLOSED) :
+                         state == door_state::OPEN ? (right ? world_gfx::DOOR_EDGE_R_OPEN :
+                                                              world_gfx::DOOR_EDGE_L_OPEN) : world_gfx::EMPTY;
+
+        if(edge != canopy)
+        {
+            set_canopy_now(outside_x, tile_y, edge);
+            changed = true;
+        }
+    }
+
+    return changed;
+}
+
 bool set_wall_gfx(int tile_x, int tile_y, world_gfx gfx, bool restore)
 {
-    return set_kept_gfx(layer::WALLS, tile_x, tile_y, gfx, restore);
+    bool done = set_kept_gfx(layer::WALLS, tile_x, tile_y, gfx, restore);
+
+    if(done)
+    {
+        static_cast<void>(update_door_edge(tile_x, tile_y));
+    }
+
+    return done;
 }
 
 int tree_at(int tile_x, int tile_y)

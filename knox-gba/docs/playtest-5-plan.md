@@ -18,7 +18,7 @@ hotbar), B in a wreck's trunk (back to the car screen), the blank info box on an
 | 4 | Losing a grab kills at full blood, the guide says a bite kills in 2 or 3 days, and "BLOCKED" can show just before | The grab timer running out was always death | **One grabber: a guaranteed bite (any clothing), then free; two or more: death (chosen)**. The guide says so |
 | 5 | The death screen shows "0 DAYS 0 H" and "0.0 KM" for a short life | Days and hours, kilometres to one decimal | Under a day: "2 H 26 MIN" / "26 MIN"; under a kilometre: metres; "1 DAY" singular |
 | 6 | An empty slot still offers A ACTIONS (Gear), an empty trunk A TAKE and R TAKE ALL | Fixed footers | Footers from the chosen slot and the container: A TAKE (DRINK for a tap) only on an item, R TAKE ALL only while something is left, SELECT SPLIT only on a stack; A STORE only on an item; B CLOSE always |
-| 7 | An exterior door is hidden under the roof until its prompt shows | Playtest 1's pick: outer doors sit under the roof (front doors under a 3 px dip) | Not changed: it reverses an earlier choice, so it needs a mockup first (see Open) |
+| 7 | An exterior door is hidden under the roof until its prompt shows | Playtest 1's pick: outer doors sit under the roof (front doors under a 3 px dip), so a door in a side wall shows only by its step | Mockup `mockups/23-side-doors.png` (`tools/mockup_side_doors.py`): A now, B a notch in the roof, C the door's edge past the wall line, D both. **C (chosen)**: on the canopy of the open tile beside a roofed side-wall door, `DOOR_EDGE_{R,L}_{CLOSED,OPEN}`: a 4 px slab of wood when closed, the door swung out along the top of the step when open, nothing when broken. Derived, never saved: drawn for each chunk as it is generated (`draw_door_edges`) and again whenever a wall graphic changes (`update_door_edge` from `set_wall_gfx`; `game::refresh_tile` redraws both sides). The four graphics go after the eave doors, so saved ids stay put |
 | 8 | Holding Down in the recipe list moves one row | Lists stepped on presses only | `menu_repeat`: in the Start menu's tabs (not the map, which has its own), searches and the car screen, a held direction repeats after 18 frames, every 5; lists wrap on a press but stop at their ends while held (`step_list`) |
 
 ## Checked
@@ -29,6 +29,9 @@ hotbar), B in a wreck's trunk (back to the car screen), the blank info box on an
 - **2:** the power-cut bench before the fix: 20 cuts per world size loaded a broken survivor, and 77 of 99 cuts lost
   a 4.7 KB world. After: no cut loses or breaks the survivor at any size; worlds up to 14,000 bytes come back whole
   from every cut; 20,000 and 28,656 bytes still lose the world on cuts during its write.
+- **7:** the travel bench's world dumps show the edges on real houses (doors in left and right walls, including front
+  doors of houses turned east or west); interior doors get none. Bench 12 (doors, locks) runs through: 261 missed
+  frames on its teleports against 255 on main (the per-chunk scan).
 - Bench 8's save round trip passes; bench 1 runs its route (no missed frames); bench 4's restarts run through.
 - Not checked in a real run: 3, 4, 5, 6 and 8 need button input mGBA from the command line can't give; they build
   and the benches pass.
@@ -39,9 +42,6 @@ hotbar), B in a wreck's trunk (back to the car screen), the blank info box on an
   containers, most of it container records), so two copies only cover the first hour or so. Beyond that a cut
   mid-write still loses the world's changes (never the survivor). Keeping both copies needs the world block under
   14 KB: smaller container records and horde counts packed into fewer bytes.
-- **Doors (7):** mockup `mockups/23-side-doors.png` (`tools/mockup_side_doors.py`), side doors closed and open: A now
-  (the step only), B a notch (the roof steps back 6 px, the door frame shows in the gap: wood shut, dark open), C the
-  door's edge past the wall line (a slab shut, swung out along the step open), D both. Waiting on the pick.
 - **P3, a later UI pass:** wreck details for parts-only wrecks, trait screen (opposite traits, unspent points, Down
   from Eagle-Eyed), the date after midnight, the new world footer strip, the 25-item UI audit and the cross-screen
   conventions, the washed-out daylight blend on the device.

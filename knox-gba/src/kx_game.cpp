@@ -4851,6 +4851,15 @@ void game::begin_build(bool farming)
 void game::refresh_tile(int tile_x, int tile_y)
 {
     _renderer.refresh_tile(tile_x, tile_y);
+
+    // A side door's edge outside it follows the door (playtest 5).
+    bool side_wall;
+
+    if(world::door_of(world::wall_gfx(tile_x, tile_y), side_wall) != world::door_state::NONE && side_wall)
+    {
+        _renderer.refresh_tile(tile_x - 1, tile_y);
+        _renderer.refresh_tile(tile_x + 1, tile_y);
+    }
 }
 
 void game::bash(int tile_x, int tile_y, const bn::fixed_point& from)
