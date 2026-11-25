@@ -4941,7 +4941,12 @@ void game::bash(int tile_x, int tile_y, const bn::fixed_point& from)
         sfx::play(sfx::id::BANG, milli(700), pan);
         noise(from, base_tuning::bang_noise);
 
-        if(base::damage_barricade(*this, tile_x, tile_y, base_tuning::zombie_damage))
+        // Barricades hold far longer than built doors and log walls (playtest 8).
+        piece_kind kind = piece_kind::BARRICADE;
+        static_cast<void>(base::find(tile_x, tile_y, kind));
+        int damage = kind == piece_kind::BARRICADE ? base_tuning::barricade_damage : base_tuning::zombie_damage;
+
+        if(base::damage_barricade(*this, tile_x, tile_y, damage))
         {
             sfx::play(sfx::id::HIT_HEAVY, 1, pan);
         }
