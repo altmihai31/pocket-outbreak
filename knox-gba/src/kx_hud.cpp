@@ -947,10 +947,13 @@ void hud::_draw_hotbar()
         int x = hotbar_left + (slot * slot_step);
         item_id id = items.hotbar(slot);
 
-        // The white frame only while that slot's item is in hand (playtest 6: it stayed after Select put it away).
-        bool in_hand = slot == target.selected_slot() && id != item_id::NONE &&
-                       items.equipped(equip_slot::HAND).id == id;
-        _canvas.panel(x, slots_top, slot_size, slot_size, colour::panel, in_hand ? colour::text : colour::border);
+        // The selected slot is always framed, so L1 + Select shows where it moved: white while its item is in hand
+        // (playtest 6: the white frame stayed after Select put it away), the accent (selection) colour otherwise.
+        // Playtest 6 framed only the item in hand, which hid the selection and made cycling look broken.
+        bool selected = slot == target.selected_slot();
+        bool in_hand = selected && id != item_id::NONE && items.equipped(equip_slot::HAND).id == id;
+        _canvas.panel(x, slots_top, slot_size, slot_size, colour::panel,
+                      in_hand ? colour::text : selected ? colour::accent : colour::border);
 
         if(id != item_id::NONE && items.available(id))
         {
