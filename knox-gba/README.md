@@ -42,6 +42,10 @@ benches 7 and 8 play a generated world. Only the game and bench 8 touch SRAM; th
 8 logs `KXSAVE` lines: the state before the save and after the load must match (position, clock, kills, carried
 weight, food, the world's zombie total, containers and a checksum of every stored item stack; since milestone 12.5 also the chunks explored, the map marks, a flashlight's state and charge, a stitched wound and two of the new traits).
 
+`python tools/save_roundtrip_test.py knox_save.gba` plays bench 8 headless in mGBA (`mgba-sdl`, a few seconds) and fails if any
+`KXSAVE saved` line doesn't come back as the matching `KXSAVE loaded` line, or the settings, the sandbox or the next survivor are
+wrong. CI runs it on every push and pull request, and a release is only published when it passes.
+
 From a devkitPro shell on a path without spaces, plain `make -j` (with the same variables) works too.
 
 Reading the bench numbers without a screen (`KXBENCH` and per-second `KXPOS` lines; add `STACKTRACE=1` to log a
