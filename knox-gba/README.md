@@ -9,7 +9,7 @@ See `CLAUDE.md` and `docs/design-spec.md`. Current state: milestones 1 (movement
 ## Setup
 
 - devkitPro with the **GBA Development** group (devkitARM, grit, gbafix, maxmod). `DEVKITPRO` / `DEVKITARM` must be set; the devkitPro installer does this.
-- Butano checked out next to this folder: `../butano` (the Makefile uses `LIBBUTANO := ../butano/butano`).
+- Butano checked out next to this folder: `../butano` (the Makefile uses `LIBBUTANO := ../butano/butano`). It's a git submodule: clone with `git clone --recursive`, or run `git submodule update --init` in an existing clone.
 - Python 3 with Pillow (`pip install pillow`) for `tools/gen_assets.py`, which the build runs first to regenerate `graphics/` and `include/kx_world_gfx_ids.h`.
 
 ## Build
